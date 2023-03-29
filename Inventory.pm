@@ -16,7 +16,10 @@ sub add_item {
     return 1;
 }
 
-sub edit_item {}
+sub rename_item {
+    my ($category_ref, $item, $new_name) = @_;
+    $category_ref->{items}[$item] = $new_name;
+}
 
 sub remove_item {}
 

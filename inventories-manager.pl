@@ -37,4 +37,8 @@ Inventory::add_category($inv{chemises}, "Chemises formelles");
 Inventory::add_item($inv{chemises}->{"Chemises formelles"}, "Boggi Milano bleu vichy Button down");
 Inventory::add_item($inv{pulls}, "Chevignon cachemire marron");
 Inventory::add_item($inv{pulls}, "Benjamin Jezequel rose gaufré");
+Inventory::add_item($inv{chaussures}, "Paraboots bi-matière");
+Inventory::add_item($inv{chaussures}, "Converse Chuck Taylor 70 moutarde");
+Inventory::add_item($inv{chaussures}, "Novesta en toile et semelle caoutchouc");
+Inventory::rename_item($inv{chaussures}, "Paraboots bi-matière", "Souliers Paraboots daim et cuir lisse");
 dd %inv;
