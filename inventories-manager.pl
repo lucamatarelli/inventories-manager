@@ -29,10 +29,12 @@ my @inventories_paths = glob "./inventories/*";
 #     print "Inventaires disponibles :\n";
 # }
 
-my %ninv = Inventory::create_inventory("chaussures", "pulls", "chemises");
-dd %ninv;
-Inventory::add_item(\%ninv, "chemises", "Boggi Milano bleu vichy Button down");
-Inventory::add_item(\%ninv, "pulls", "Chevignon cachemire marron");
-Inventory::add_item(\%ninv, "pulls", "Benjamin Jezequel rose gaufré");
-Inventory::add_category(\%ninv, "jeans");
-dd %ninv;
+
+# Tests d'inventaire
+my %inv = Inventory::new_inventory("chaussures", "pulls", "chemises");
+dd %inv;
+Inventory::add_category($inv{chemises}, "Chemises formelles");
+Inventory::add_item($inv{chemises}->{"Chemises formelles"}, "Boggi Milano bleu vichy Button down");
+Inventory::add_item($inv{pulls}, "Chevignon cachemire marron");
+Inventory::add_item($inv{pulls}, "Benjamin Jezequel rose gaufré");
+dd %inv;

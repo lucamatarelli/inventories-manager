@@ -3,16 +3,16 @@ package Inventory;
 use strict;
 use warnings;
 
-sub create_inventory {
+sub new_inventory {
     my @categories = @_;
     my %new_inventory;
-    $new_inventory{$_} = [] for (@categories);
+    $new_inventory{$_} = {items => []} for (@categories);
     return %new_inventory;
 }
 
 sub add_item {
-    my ($inventory_ref, $category, $item) = @_;
-    push @{$inventory_ref->{$category}}, $item;
+    my ($category_ref, $new_item) = @_;
+    push @{$category_ref->{items}}, $new_item;
     return 1;
 }
 
@@ -21,8 +21,8 @@ sub edit_item {}
 sub remove_item {}
 
 sub add_category {
-    my ($inventory_ref, $category) = @_;
-    $inventory_ref->{$category} = [];
+    my ($category_ref, $new_category) = @_;
+    $category_ref->{$new_category} = {items => []};
     return 1;
 }
 
