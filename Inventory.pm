@@ -13,33 +13,40 @@ sub new_inventory {
 }
 
 sub add_item {
-    my ($category_ref, $new_item) = @_;
-    push @{$category_ref->{items}}, $new_item;
+    my ($curr_category_ref, $new_item) = @_;
+    push @{$curr_category_ref->{items}}, $new_item;
 }
 
 sub rename_item {
-    my ($category_ref, $item, $new_name) = @_;
-    for (@{$category_ref->{items}}) {
+    my ($curr_category_ref, $item, $new_name) = @_;
+    for (@{$curr_category_ref->{items}}) {
         $_ = $new_name if ($_ eq $item);
     }
 }
 
+sub move_item {}
+
 sub remove_item {
-    my ($category_ref, $item) = @_;
-    my @current_items = @{$category_ref->{items}};
-    my $item_index = first {$current_items[$_] eq $item} 0..@current_items-1;
-    splice(@{$category_ref->{items}}, $item_index);
+    my ($curr_category_ref, $item) = @_;
+    my @curr_items = @{$curr_category_ref->{items}};
+    my $item_index = first {$curr_items[$_] eq $item} 0..@curr_items-1;
+    splice(@{$curr_category_ref->{items}}, $item_index);
 }
 
 sub add_category {
-    my ($category_ref, $new_category) = @_;
-    $category_ref->{$new_category} = {items => []};
+    my ($curr_category_ref, $new_category) = @_;
+    $curr_category_ref->{$new_category} = {items => []};
 }
 
-sub rename_category {}
+sub rename_category {
+    my ($curr_category_ref, $category, $new_name) = @_;
+    $curr_category_ref->{$new_name} = delete $curr_category_ref->{$category};
+}
 
 sub move_category {}
 
-sub remove_category {}
+sub remove_category {
+    my ($curr_category_ref, $category) = @_;
+}
 
 1;

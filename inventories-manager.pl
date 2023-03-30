@@ -42,4 +42,5 @@ Inventory::add_item($inv{chaussures}, "Converse Chuck Taylor 70 moutarde");
 Inventory::add_item($inv{chaussures}, "Novesta en toile et semelle caoutchouc");
 Inventory::rename_item($inv{chaussures}, "Paraboots bi-matière", "Souliers Paraboots daim et cuir lisse");
 Inventory::remove_item($inv{chaussures}, "Novesta en toile et semelle caoutchouc");
+Inventory::rename_category($inv{chemises}, "Chemises formelles", "Chemises habillées");
 dd %inv;
