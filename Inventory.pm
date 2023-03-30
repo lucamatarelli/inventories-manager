@@ -18,7 +18,10 @@ sub add_item {
 
 sub rename_item {
     my ($category_ref, $item, $new_name) = @_;
-    $category_ref->{items}[$item] = $new_name;
+    for (@{$category_ref->{items}}) {
+        $_ = $new_name if ($_ eq $item);
+    }
+    return 1;
 }
 
 sub remove_item {}
