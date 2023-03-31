@@ -2,6 +2,7 @@ package Inventory;
 
 use strict;
 use warnings;
+use utf8;
 
 use List::Util qw(first);
 
@@ -47,6 +48,20 @@ sub move_category {}
 
 sub remove_category {
     my ($curr_category_ref, $category) = @_;
+    my %category_items = %{$curr_category_ref->{$category}};
+    if ((scalar(keys %category_items) == 1) and (scalar @{$category_items{items}} == 0)) {
+        delete $curr_category_ref->{$category};
+    } else {
+        # Afficher tous les items et sous-catégories (ainsi que leurs tailles respectives) contenus dans $category !
+        # print "Cette catégorie contient les items suivants : " . join(" ; ", @category_items) . ".\n";
+        print "Êtes-vous certain de vouloir supprimer cette catégorie et ces items ? (o/n) ";
+        my $input = <STDIN>;
+        while ($input !~ /^o\n|n\n$/i) {
+            print "Êtes-vous certain de vouloir supprimer cette catégorie et ces items ? (o/n) ";
+            $input = <STDIN>;
+        }
+        delete $curr_category_ref->{$category} if ($input =~ /o\n/i);
+    }
 }
 
 1;
