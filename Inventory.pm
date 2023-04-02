@@ -39,6 +39,20 @@ sub add_category {
     $curr_category_ref->{$new_category} = {items => []};
 }
 
+sub category_to_string {
+    my ($curr_category_ref) = @_;
+    my $category_content = "";
+    my @curr_items = @{$curr_category_ref->{items}};
+    my @subcategories = grep {$_ ne "items"} keys %$curr_category_ref;
+    if (scalar @curr_items != 0) {
+        $category_content .= "- " . $_ . "\n" for (@curr_items);
+    }
+    if (scalar @subcategories != 0) {
+        $category_content .= "[" . $_ . "]" . "\n" for (@subcategories);
+    }
+    return $category_content;
+}
+
 sub rename_category {
     my ($curr_category_ref, $category, $new_name) = @_;
     $curr_category_ref->{$new_name} = delete $curr_category_ref->{$category};
