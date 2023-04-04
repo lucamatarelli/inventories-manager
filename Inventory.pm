@@ -39,7 +39,7 @@ sub remove_item {
     my ($curr_category_ref, $item) = @_;
     my @curr_items = @{$curr_category_ref->{items}};
     my $item_index = first {$curr_items[$_] eq $item} 0..@curr_items-1;
-    splice(@{$curr_category_ref->{items}}, $item_index);
+    splice(@{$curr_category_ref->{items}}, $item_index, 1);
 }
 
 sub add_category {

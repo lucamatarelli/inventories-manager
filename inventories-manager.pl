@@ -29,7 +29,7 @@ sub input_check {
 
 sub display_inventory_options {
     my ($curr_category_ref, $inventory_name) = @_;
-    print "Niveau courant dans l'inventaire \"" . $inventory_name . "\" :\n\n";
+    print "\nNiveau courant dans l'inventaire \"" . $inventory_name . "\" :\n\n";
     print category_to_string($curr_category_ref);
     print "\nActions :\n";
     print "1. Aller dans une catégorie\n";
@@ -44,36 +44,60 @@ sub display_inventory_options {
 
 sub do_action {
     my ($option_number, $curr_category_ref) = @_;
+
+    my @subcategories = grep {$_ ne "items"} keys %$curr_category_ref;
+    my $subcategories_disjunction = join "|", @subcategories;
+    my @curr_items = defined $curr_category_ref->{items} ? @{$curr_category_ref->{items}} : ();
+    my $curr_items_disjunction = join "|", @curr_items;
+
     if ($option_number eq "1") {
         print "Déplacement vers quelle catégorie ? ";
-        my @subcategories = grep {$_ ne "items"} keys %$curr_category_ref;
-        my $subcategories_disjunction = join "|", @subcategories;
         my $new_category_ref = input_check(qr/^($subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
-        $curr_category_ref = $curr_category_ref->{$new_category_ref};
-        return $curr_category_ref;
+        $curr_category_ref = $curr_category_ref->{$new_category_ref};        
      } elsif ($option_number eq "2") {
 
     } elsif ($option_number eq "3") {
-        
+        print "Nommez votre nouvelle catégorie : ";
+        my $new_category_name = <STDIN>;
+        chomp $new_category_name;
+        add_category($curr_category_ref, $new_category_name);
     } elsif ($option_number eq "4") {
-        
+        print "Quelle catégorie souhaitez-vous renommer ? ";
+        my $category_to_rename = input_check(qr/^($subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
+        print "Indiquez le nouveau nom de [" . $category_to_rename . "] : "; 
+        my $category_new_name = <STDIN>;
+        chomp $category_new_name;
+        rename_category($curr_category_ref, $category_to_rename, $category_new_name);
     } elsif ($option_number eq "5") {
         
     } elsif ($option_number eq "6") {
-        
+        print "Quelle catégorie souhaitez-vous supprimer ? ";
+        my $category_to_remove = input_check(qr/^($subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
+        remove_category($curr_category_ref, $category_to_remove);
     } elsif ($option_number eq "7") {
-        
+        print "Nouvel item : ";
+        my $new_item = <STDIN>;
+        chomp $new_item;
+        add_item($curr_category_ref, $new_item);
     } elsif ($option_number eq "8") {
-        
+        print "Quel item souhaitez-vous renommer ? ";
+        my $item_to_rename = input_check(qr/^($curr_items_disjunction)$/, "Veuillez entrer un nom d'item valide : ");
+        print "Indiquez le nouveau nom de \"" . $item_to_rename . "\" : "; 
+        my $item_new_name = <STDIN>;
+        chomp $item_new_name;
+        rename_item($curr_category_ref, $item_to_rename, $item_new_name);
     } elsif ($option_number eq "9") {
         
     } elsif ($option_number eq "10") {
-        
+        print "Quel item souhaitez-vous supprimer ? ";
+        my $item_to_remove = input_check(qr/^($curr_items_disjunction)$/, "Veuillez entrer un nom d'item valide : ");
+        remove_item($curr_category_ref, $item_to_remove);
     } elsif ($option_number eq "11") {
         return "EXIT";
     } elsif ($option_number eq "12") {
         return "EXIT";        
     }
+    return $curr_category_ref;
 }
 
 my @inventories_paths = glob "./inventories/*";
