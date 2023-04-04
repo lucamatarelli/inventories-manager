@@ -8,6 +8,7 @@ use Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT = qw(
     new_inventory
+    get_curr_items_ref get_curr_subcategories_ref
     add_item rename_item remove_item
     add_category category_to_string rename_category remove_category
 );
@@ -21,14 +22,26 @@ sub new_inventory {
     return %new_inventory;
 }
 
+sub get_curr_items_ref {
+    my ($curr_category_ref) = @_;
+    my $curr_items_ref = defined $curr_category_ref->{items} ? $curr_category_ref->{items} : [];
+    return $curr_items_ref;
+}
+
+sub get_curr_subcategories_ref {
+    my ($curr_category_ref) = @_;
+    my @curr_subcategories = grep {$_ ne "items"} keys %$curr_category_ref;
+    return \@curr_subcategories;
+}
+
 sub add_item {
     my ($curr_category_ref, $new_item) = @_;
-    push @{$curr_category_ref->{items}}, $new_item;
+    push @{get_curr_items_ref($curr_category_ref)}, $new_item;
 }
 
 sub rename_item {
     my ($curr_category_ref, $item, $new_name) = @_;
-    for (@{$curr_category_ref->{items}}) {
+    for (@{get_curr_items_ref($curr_category_ref)}) {
         $_ = $new_name if ($_ eq $item);
     }
 }
@@ -37,9 +50,9 @@ sub move_item {}
 
 sub remove_item {
     my ($curr_category_ref, $item) = @_;
-    my @curr_items = @{$curr_category_ref->{items}};
+    my @curr_items = @{get_curr_items_ref($curr_category_ref)};
     my $item_index = first {$curr_items[$_] eq $item} 0..@curr_items-1;
-    splice(@{$curr_category_ref->{items}}, $item_index, 1);
+    splice(@{get_curr_items_ref($curr_category_ref)}, $item_index, 1);
 }
 
 sub add_category {
@@ -50,13 +63,13 @@ sub add_category {
 sub category_to_string {
     my ($curr_category_ref) = @_;
     my $category_content = "";
-    my @curr_items = defined $curr_category_ref->{items} ? @{$curr_category_ref->{items}} : ();
-    my @subcategories = grep {$_ ne "items"} keys %$curr_category_ref;
+    my @curr_items = @{get_curr_items_ref($curr_category_ref)};
+    my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref)};
     if (scalar @curr_items != 0) {
         $category_content .= "- " . $_ . "\n" for (@curr_items);
     }
-    if (scalar @subcategories != 0) {
-        $category_content .= "[" . $_ . "]" . "\n" for (@subcategories);
+    if (scalar @curr_subcategories != 0) {
+        $category_content .= "[" . $_ . "]" . "\n" for (@curr_subcategories);
     }
     return $category_content;
 }
@@ -70,8 +83,11 @@ sub move_category {}
 
 sub remove_category {
     my ($curr_category_ref, $category) = @_;
-    my %category_items = %{$curr_category_ref->{$category}};
-    if ((scalar(keys %category_items) == 1) and (scalar @{$category_items{items}} == 0)) {
+
+    my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref->{$category})};
+    my @curr_items = @{get_curr_items_ref($curr_category_ref->{$category})};
+
+    if ((scalar @curr_subcategories == 0) and (scalar @curr_items == 0)) {
         delete $curr_category_ref->{$category};
     } else {
         # Afficher tous les items et sous-catégories (ainsi que leurs tailles respectives) contenus dans $category !

@@ -45,14 +45,14 @@ sub display_inventory_options {
 sub do_action {
     my ($option_number, $curr_category_ref) = @_;
 
-    my @subcategories = grep {$_ ne "items"} keys %$curr_category_ref;
-    my $subcategories_disjunction = join "|", @subcategories;
-    my @curr_items = defined $curr_category_ref->{items} ? @{$curr_category_ref->{items}} : ();
+    my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref)};
+    my $curr_subcategories_disjunction = join "|", @curr_subcategories;
+    my @curr_items = @{get_curr_items_ref($curr_category_ref)};
     my $curr_items_disjunction = join "|", @curr_items;
 
     if ($option_number eq "1") {
         print "Déplacement vers quelle catégorie ? ";
-        my $new_category_ref = input_check(qr/^($subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
+        my $new_category_ref = input_check(qr/^($curr_subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
         $curr_category_ref = $curr_category_ref->{$new_category_ref};        
      } elsif ($option_number eq "2") {
 
@@ -63,7 +63,7 @@ sub do_action {
         add_category($curr_category_ref, $new_category_name);
     } elsif ($option_number eq "4") {
         print "Quelle catégorie souhaitez-vous renommer ? ";
-        my $category_to_rename = input_check(qr/^($subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
+        my $category_to_rename = input_check(qr/^($curr_subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
         print "Indiquez le nouveau nom de [" . $category_to_rename . "] : "; 
         my $category_new_name = <STDIN>;
         chomp $category_new_name;
@@ -72,7 +72,7 @@ sub do_action {
         
     } elsif ($option_number eq "6") {
         print "Quelle catégorie souhaitez-vous supprimer ? ";
-        my $category_to_remove = input_check(qr/^($subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
+        my $category_to_remove = input_check(qr/^($curr_subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
         remove_category($curr_category_ref, $category_to_remove);
     } elsif ($option_number eq "7") {
         print "Nouvel item : ";
