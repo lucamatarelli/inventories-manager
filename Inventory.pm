@@ -4,6 +4,14 @@ use strict;
 use warnings;
 use utf8;
 
+use Exporter;
+our @ISA = qw(Exporter);
+our @EXPORT = qw(
+    new_inventory
+    add_item rename_item remove_item
+    add_category category_to_string rename_category remove_category
+);
+
 use List::Util qw(first);
 
 sub new_inventory {
@@ -42,7 +50,7 @@ sub add_category {
 sub category_to_string {
     my ($curr_category_ref) = @_;
     my $category_content = "";
-    my @curr_items = @{$curr_category_ref->{items}};
+    my @curr_items = defined $curr_category_ref->{items} ? @{$curr_category_ref->{items}} : ();
     my @subcategories = grep {$_ ne "items"} keys %$curr_category_ref;
     if (scalar @curr_items != 0) {
         $category_content .= "- " . $_ . "\n" for (@curr_items);
