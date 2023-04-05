@@ -13,6 +13,7 @@ if ($^O eq "MSWin32") {
     binmode STDIN, ":encoding(CP-850)";
 } elsif ($^O eq "linux") {
     binmode STDOUT, ":encoding(UTF-8)";
+    binmode STDIN, ":encoding(UTF-8)";
 }
 
 sub input_check {
@@ -26,6 +27,50 @@ sub input_check {
     }
     return $user_input;
 }
+
+sub display_main_menu {
+    print "\nQue souhaitez-vous faire ?\n";
+    print "1. Créer un nouvel inventaire\n2. Ouvrir un inventaire\n3. Quitter le gestionnaire\n\n";
+    print "Entrez le numéro de l'action à effectuer : ";
+    my $option_choice_nb = input_check(qr/^[123]$/, "Veuillez entrer un numéro d'option valide : ");
+    return $option_choice_nb;
+}
+
+sub create_inventory {
+    print "\nNommez votre nouvel inventaire : ";
+    my $new_inventory_name = input_check(qr/^[\p{L}\d -]+$/, "Nom d'inventaire non valide. Réessayez avec un format valide : ");
+
+    print "\nEntrez les noms des macro-catégories que contiendra votre inventaire.\n(Entrez \"/\" une fois toutes vos catégories inscrites)\n";
+    my $macrocategory_number = 1;
+    my @macrocategories;
+    print "Catégorie 1 : ";
+    my $macrocategory_name = input_check(qr/^[^\/]+$/, "Vous devez entrer au moins une catégorie !\nCatégorie 1 : ");
+    while ($macrocategory_name ne "/") {
+        push @macrocategories, $macrocategory_name;
+        print "Catégorie " . ++$macrocategory_number . " : ";
+        $macrocategory_name = input_check(qr/^[^\n]+$/, "Catégorie " . $macrocategory_number . " : ");
+    }
+    
+    my %new_inventory = new_inventory(@macrocategories);
+    print "\nNouvel inventaire créé !\n\n";
+    sleep 2;
+    return (\%new_inventory, $new_inventory_name);
+}
+
+sub manage_inventory {
+    my ($inventory_ref, $inventory_name) = @_;
+    my $curr_category_ref = $inventory_ref;
+    while (1) {
+        my $action_choice = display_inventory_options($curr_category_ref, $inventory_name);
+        my $action_result = do_action($action_choice, $curr_category_ref);
+        if (ref $action_result eq "HASH") {
+            $curr_category_ref = $action_result;
+        } else {
+            last if $action_result eq "EXIT";
+        }
+    }
+}
+
 
 {
 my @subcategories_depth;
@@ -76,15 +121,15 @@ sub display_inventory_options {
     $valid_options{$option_nb} = "quit_save";
     print ++$option_nb . ". Quitter sans enregistrer\n\n";
     $valid_options{$option_nb} = "quit_nosave";
-    print "Entrez le numéro de l'action à effectuer : ";
 
+    print "Entrez le numéro de l'action à effectuer : ";
     my $valid_options_disjunction = join "|", keys %valid_options;
     my $option_choice_nb = input_check(qr/^($valid_options_disjunction)$/, "Veuillez entrer un numéro d'option valide : ");
     return $valid_options{$option_choice_nb};
 }
 
 sub do_action {
-    my ($action, $curr_category_ref) = @_; # Transmettre des "codes" sous forme de strings plutôt que numéros d'options
+    my ($action, $curr_category_ref) = @_;
 
     my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref)};
     my $curr_subcategories_disjunction = join "|", @curr_subcategories;
@@ -143,44 +188,16 @@ sub do_action {
 }
 }
 
+
 my @inventories_paths = glob "./inventories/*";
-my $input = "";
 
 if (scalar @inventories_paths == 0) {
     print "Aucun inventaire disponible.\nSouhaitez-vous en créer un ? (o/n) ";    
-    $input = input_check(qr/^[on]$/i, "Choix invalide. Souhaitez-vous créer votre premier inventaire ? (o/n) ");
-
-    if ($input =~ /^o$/i) {
-        print "\nNommez votre nouvel inventaire : ";
-        my $new_inventory_name = input_check(qr/^[\p{L}\d -]+$/, "Nom d'inventaire non valide. Réessayez avec un format valide : ");
-
-        print "\nEntrez les noms des macro-catégories que contiendra votre inventaire.\n(Entrez \"/\" une fois toutes vos catégories inscrites)\n";
-        my $macrocategory_number = 1;
-        my @macrocategories;
-        print "Catégorie 1 : ";
-        $input = input_check(qr/^[^\/]+$/, "Vous devez entrer au moins une catégorie !\nCatégorie 1 : ");
-        while ($input ne "/") {
-            $macrocategory_number++;
-            print "Catégorie " . $macrocategory_number . " : ";
-            push @macrocategories, $input;
-            $input = input_check(qr/^[^\n]+$/, "Catégorie " . $macrocategory_number . " : ");
-            chomp $input;
-        }
-        
-        my %new_inventory = new_inventory(@macrocategories);
-        print "\nNouvel inventaire créé !\n\n";
-        sleep 2;
-
-        my $curr_category_ref = \%new_inventory;
-        while (1) {
-            my $action_choice = display_inventory_options($curr_category_ref, $new_inventory_name);
-            my $action_result = do_action($action_choice, $curr_category_ref);
-            if (ref $action_result eq "HASH") {
-                $curr_category_ref = $action_result;
-            } else {
-                last if $action_result eq "EXIT";
-            }
-        }
+    my $first_inventory_confirmation = input_check(qr/^[on]$/i, "Choix invalide. Souhaitez-vous créer votre premier inventaire ? (o/n) ");
+    if ($first_inventory_confirmation =~ /^o$/i) {
+        my ($first_inventory_ref, $first_inventory_name) = create_inventory();       
+        manage_inventory($first_inventory_ref, $first_inventory_name);
+        my $main_menu_action = display_main_menu();
     }
 } else {
     print "Inventaires disponibles :\n";
