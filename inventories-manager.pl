@@ -42,6 +42,9 @@ sub display_inventory_options {
     return $option_choice;
 }
 
+{
+my @subcategories_depth;
+
 sub do_action {
     my ($option_number, $curr_category_ref) = @_;
 
@@ -51,11 +54,12 @@ sub do_action {
     my $curr_items_disjunction = join "|", @curr_items;
 
     if ($option_number eq "1") {
+        push @subcategories_depth, $curr_category_ref;
         print "Déplacement vers quelle catégorie ? ";
-        my $new_category_ref = input_check(qr/^($curr_subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
-        $curr_category_ref = $curr_category_ref->{$new_category_ref};        
-     } elsif ($option_number eq "2") {
-
+        my $new_curr_category = input_check(qr/^($curr_subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
+        $curr_category_ref = $curr_category_ref->{$new_curr_category};        
+    } elsif ($option_number eq "2") {
+        $curr_category_ref = pop @subcategories_depth;
     } elsif ($option_number eq "3") {
         print "Nommez votre nouvelle catégorie : ";
         my $new_category_name = <STDIN>;
@@ -95,9 +99,10 @@ sub do_action {
     } elsif ($option_number eq "11") {
         return "EXIT";
     } elsif ($option_number eq "12") {
-        return "EXIT";        
+        return "EXIT";
     }
     return $curr_category_ref;
+}
 }
 
 my @inventories_paths = glob "./inventories/*";
