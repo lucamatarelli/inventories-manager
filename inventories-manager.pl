@@ -16,18 +16,6 @@ if ($^O eq "MSWin32") {
     binmode STDIN, ":encoding(UTF-8)";
 }
 
-sub input_check {
-    my ($pattern, $fail_msg) = @_;
-    my $user_input = <STDIN>;
-    chomp $user_input;
-    while ($user_input !~ $pattern) {
-        print $fail_msg;
-        $user_input = <STDIN>;
-        chomp $user_input;
-    }
-    return $user_input;
-}
-
 sub main_loop_menu {
     my $option_choice_nb = "";
     while ($option_choice_nb ne "3") {
@@ -35,11 +23,27 @@ sub main_loop_menu {
         print "1. Créer un nouvel inventaire\n2. Ouvrir un inventaire\n3. Quitter le gestionnaire\n\n";
         print "Entrez le numéro de l'action à effectuer : ";
         $option_choice_nb = input_check(qr/^[123]$/, "Veuillez entrer un numéro d'action valide : ");
+
         if ($option_choice_nb eq "1") {
             my ($new_inventory_ref, $new_inventory_name) = create_inventory();
             manage_inventory($new_inventory_ref, $new_inventory_name);
         } elsif ($option_choice_nb eq "2") {
+            my @inventories_paths = glob "$FindBin::Bin/inventories/*";
+            if (scalar @inventories_paths == 0) {
+                print "\nAucun inventaire n'a été trouvé.\n";
+                sleep 2;
+            } else {
+                print "\nInventaires disponibles :\n";
+                my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
+                print "=> " . $_ . "\n" for (@inventories);
 
+                print "\nQuel inventaire souhaitez-vous ouvrir ? ";
+                my $inventories_disjunction = join "|", @inventories;
+                my $inventory_to_open_name = input_check(qr/^($inventories_disjunction)$/, "Veuillez saisir un nom d'inventaire valide : ");
+
+                my $inventory_to_open_ref = retrieve "$FindBin::Bin/inventories/$inventory_to_open_name";
+                manage_inventory($inventory_to_open_ref, $inventory_to_open_name);
+            }
         }
     }
 }
@@ -74,7 +78,8 @@ sub manage_inventory {
         if (ref $action_result eq "HASH") {
             $curr_category_ref = $action_result;
         } else {
-            last if $action_result eq "EXIT";
+            store $inventory_ref, "$FindBin::Bin/inventories/$inventory_name" if $action_result =~ /-SV$/;
+            last if $action_result =~ /^EXIT/;
         }
     }
 }
@@ -187,7 +192,7 @@ sub manage_inventory {
             my $item_to_remove = input_check(qr/^($curr_items_disjunction)$/, "Veuillez entrer un nom d'item valide : ");
             remove_item($curr_category_ref, $item_to_remove);
         } elsif ($action eq "quit_save") {
-            return "EXIT";
+            return "EXIT-SV";
         } elsif ($action eq "quit_nosave") {
             return "EXIT";
         }
@@ -195,17 +200,17 @@ sub manage_inventory {
     }
 }
 
-main_loop_menu();
-# my @inventories_paths = glob "./inventories/*";
+sub input_check {
+    my ($pattern, $fail_msg) = @_;
+    my $user_input = <STDIN>;
+    chomp $user_input;
+    while ($user_input !~ $pattern) {
+        print $fail_msg;
+        $user_input = <STDIN>;
+        chomp $user_input;
+    }
+    return $user_input;
+}
 
-# if (scalar @inventories_paths == 0) {
-#     print "Aucun inventaire disponible.\nSouhaitez-vous en créer un ? (o/n) ";    
-#     my $first_inventory_confirmation = input_check(qr/^[on]$/i, "Choix invalide. Souhaitez-vous créer votre premier inventaire ? (o/n) ");
-#     if ($first_inventory_confirmation =~ /^o$/i) {
-#         my ($first_inventory_ref, $first_inventory_name) = create_inventory();
-#         manage_inventory($first_inventory_ref, $first_inventory_name);
-#         my $main_menu_action = display_main_menu();
-#     }
-# } else {
-#     print "Inventaires disponibles :\n";
-# }
+
+main_loop_menu();
