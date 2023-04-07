@@ -4,6 +4,7 @@ use utf8;
 
 use FindBin;
 use lib "$FindBin::Bin";
+use File::Copy;
 use Storable;
 
 use Inventory;
@@ -17,33 +18,69 @@ if ($^O eq "MSWin32") {
 }
 
 sub main_loop_menu {
-    my $option_choice_nb = "";
-    while ($option_choice_nb ne "3") {
-        print "\nQue souhaitez-vous faire ?\n";
-        print "1. Créer un nouvel inventaire\n2. Ouvrir un inventaire\n3. Quitter le gestionnaire\n\n";
-        print "Entrez le numéro de l'action à effectuer : ";
-        $option_choice_nb = input_check(qr/^[123]$/, "Veuillez entrer un numéro d'action valide : ");
+    my $action_choice = "";
+    while ($action_choice ne "EXIT") {
+        my @inventories_paths = glob "$FindBin::Bin/inventories/*";
+        my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
+        my $inventories_disjunction = join "|", @inventories;
 
-        if ($option_choice_nb eq "1") {
+        if (scalar @inventories_paths == 0) {
+            print "\nAucun inventaire disponible.\n";
+        } else {
+            print "\nInventaires disponibles :\n";
+            print "=> " . $_ . "\n" for (@inventories);
+        }
+
+        my $option_nb = 0;
+        my %valid_options;
+
+        print "\nQue souhaitez-vous faire ?\n";
+
+        print ++$option_nb . ". Créer un nouvel inventaire\n";
+        $valid_options{$option_nb} = "add_inv";
+        if (scalar @inventories_paths != 0) {
+            print ++$option_nb . ". Ouvrir un inventaire\n";
+            $valid_options{$option_nb} = "open_inv";
+            print ++$option_nb . ". Renommer un inventaire\n";
+            $valid_options{$option_nb} = "ren_inv";
+            print ++$option_nb . ". Supprimer un inventaire\n";
+            $valid_options{$option_nb} = "rm_inv";
+        }
+        print ++$option_nb . ". Quitter le gestionnaire\n\n";
+        $valid_options{$option_nb} = "EXIT";
+
+        print "Entrez le numéro de l'action à effectuer : ";
+        my $option_choice_nb = scalar @inventories_paths != 0 ?
+            input_check(qr/^[12345]$/, "Veuillez entrer un numéro d'action valide : ") :
+            input_check(qr/^[12]$/, "Veuillez entrer un numéro d'action valide : ");
+        $action_choice = $valid_options{$option_choice_nb};
+
+        if ($action_choice eq "add_inv") {
             my ($new_inventory_ref, $new_inventory_name) = create_inventory();
             manage_inventory($new_inventory_ref, $new_inventory_name);
-        } elsif ($option_choice_nb eq "2") {
-            my @inventories_paths = glob "$FindBin::Bin/inventories/*";
-            if (scalar @inventories_paths == 0) {
-                print "\nAucun inventaire n'a été trouvé.\n";
-                sleep 2;
-            } else {
-                print "\nInventaires disponibles :\n";
-                my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
-                print "=> " . $_ . "\n" for (@inventories);
-
+        } elsif ($action_choice eq "open_inv") {
                 print "\nQuel inventaire souhaitez-vous ouvrir ? ";
-                my $inventories_disjunction = join "|", @inventories;
                 my $inventory_to_open_name = input_check(qr/^($inventories_disjunction)$/, "Veuillez saisir un nom d'inventaire valide : ");
-
                 my $inventory_to_open_ref = retrieve "$FindBin::Bin/inventories/$inventory_to_open_name";
                 manage_inventory($inventory_to_open_ref, $inventory_to_open_name);
-            }
+        } elsif ($action_choice eq "ren_inv") {
+            print "\nQuel inventaire souhaitez-vous renommer ? ";
+            my $inventory_to_rename = input_check(qr/^($inventories_disjunction)$/, "Veuillez saisir un nom d'inventaire valide : ");
+
+            print "Indiquez le nouveau nom de \"" . $inventory_to_rename . "\" : ";
+            my $inventory_new_name = <STDIN>;
+            chomp $inventory_new_name;
+
+            move "$FindBin::Bin/inventories/$inventory_to_rename", "$FindBin::Bin/inventories/$inventory_new_name";
+        } elsif ($action_choice eq "rm_inv") {
+            print "\nQuel inventaire souhaitez-vous supprimer ? ";
+            my $inventory_to_remove = input_check(qr/^($inventories_disjunction)$/, "Veuillez saisir un nom d'inventaire valide : ");
+
+            print "\nCette opération supprimera irréversiblement l'inventaire \"$inventory_to_remove\" et son contenu.\n";
+            print "Êtes-vous sûr de vouloir continuer (o/n) ? ";
+            my $rm_confirm = input_check(qr/^[on]$/i, "Choix invalide. Êtes-vous sûr de vouloir supprimer \"$inventory_to_remove\" (o/n) ? ");
+
+            unlink "$FindBin::Bin/inventories/$inventory_to_remove" if ($rm_confirm =~ /^[oO]$/);            
         }
     }
 }
@@ -163,7 +200,7 @@ sub manage_inventory {
         } elsif ($action eq "ren_cat") {
             print "Quelle catégorie souhaitez-vous renommer ? ";
             my $category_to_rename = input_check(qr/^($curr_subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
-            print "Indiquez le nouveau nom de [" . $category_to_rename . "] : "; 
+            print "Indiquez le nouveau nom de [" . $category_to_rename . "] : ";
             my $category_new_name = <STDIN>;
             chomp $category_new_name;
             rename_category($curr_category_ref, $category_to_rename, $category_new_name);
