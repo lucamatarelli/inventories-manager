@@ -119,14 +119,14 @@ sub create_inventory {
 sub manage_inventory {
     my ($inventory_ref, $inventory_name) = @_;
     my $curr_category_ref = $inventory_ref;
-    while (1) {
+    my $action_result = "";
+    while ($action_result !~ /^EXIT/) {
         my $action_choice = display_inventory_options($curr_category_ref, $inventory_name);
-        my $action_result = do_action($action_choice, $curr_category_ref);
+        $action_result = do_action($action_choice, $curr_category_ref);
         if (ref $action_result eq "HASH") {
             $curr_category_ref = $action_result;
         } else {
             store $inventory_ref, "$FindBin::Bin/inventories/$inventory_name" if $action_result =~ /-SV$/;
-            last if $action_result =~ /^EXIT/;
         }
     }
 }
