@@ -5,6 +5,7 @@ use utf8;
 use FindBin;
 use lib "$FindBin::Bin";
 use File::Copy;
+use List::Util qw(any);
 use Storable;
 
 use Inventory;
@@ -20,11 +21,10 @@ if ($^O eq "MSWin32") {
 sub main_loop_menu {
     my $action_choice = "";
     while ($action_choice ne "EXIT") {
-        my @inventories_paths = glob "$FindBin::Bin/inventories/*";
-        my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
+        my @inventories = get_inventories();
         my $inventories_disjunction = join "|", @inventories;
 
-        if (scalar @inventories_paths == 0) {
+        if (scalar @inventories == 0) {
             print "\nAucun inventaire disponible.\n";
         } else {
             print "\nInventaires disponibles :\n";
@@ -38,7 +38,7 @@ sub main_loop_menu {
 
         print ++$option_nb . ". Créer un nouvel inventaire\n";
         $valid_options{$option_nb} = "add_inv";
-        if (scalar @inventories_paths != 0) {
+        if (scalar @inventories != 0) {
             print ++$option_nb . ". Ouvrir un inventaire\n";
             $valid_options{$option_nb} = "open_inv";
             print ++$option_nb . ". Renommer un inventaire\n";
@@ -50,7 +50,7 @@ sub main_loop_menu {
         $valid_options{$option_nb} = "EXIT";
 
         print "Entrez le numéro de l'action à effectuer : ";
-        my $option_choice_nb = scalar @inventories_paths != 0 ?
+        my $option_choice_nb = scalar @inventories != 0 ?
             input_check(qr/^[12345]$/, "Veuillez entrer un numéro d'action valide : ") :
             input_check(qr/^[12]$/, "Veuillez entrer un numéro d'action valide : ");
         $action_choice = $valid_options{$option_choice_nb};
@@ -68,8 +68,12 @@ sub main_loop_menu {
             my $inventory_to_rename = input_check(qr/^($inventories_disjunction)$/, "Veuillez saisir un nom d'inventaire valide : ");
 
             print "Indiquez le nouveau nom de \"" . $inventory_to_rename . "\" : ";
-            my $inventory_new_name = <STDIN>;
-            chomp $inventory_new_name;
+            my $inventory_new_name = "";
+            while (1) {
+                $inventory_new_name = input_check(qr/^[\p{L}\d_-]+$/, "Format non valide. Indiquez le nouveau nom de \"" . $inventory_to_rename . "\" : ");
+                last if (not any {$_ eq $inventory_new_name} @inventories);
+                print "Un inventaire porte déjà le nom de \"$inventory_new_name\".\nVeuillez choisir un nom différent : ";
+            }
 
             move "$FindBin::Bin/inventories/$inventory_to_rename", "$FindBin::Bin/inventories/$inventory_new_name";
         } elsif ($action_choice eq "rm_inv") {
@@ -78,7 +82,7 @@ sub main_loop_menu {
 
             print "\nCette opération supprimera irréversiblement l'inventaire \"$inventory_to_remove\" et son contenu.\n";
             print "Êtes-vous sûr de vouloir continuer (o/n) ? ";
-            my $rm_confirm = input_check(qr/^[on]$/i, "Choix invalide. Êtes-vous sûr de vouloir supprimer \"$inventory_to_remove\" (o/n) ? ");
+            my $rm_confirm = input_check(qr/^[on]$/i, "Choix non valide. Êtes-vous sûr de vouloir supprimer \"$inventory_to_remove\" (o/n) ? ");
 
             unlink "$FindBin::Bin/inventories/$inventory_to_remove" if ($rm_confirm =~ /^[oO]$/);            
         }
@@ -87,17 +91,23 @@ sub main_loop_menu {
 
 sub create_inventory {
     print "\nNommez votre nouvel inventaire : ";
-    my $new_inventory_name = input_check(qr/^[\p{L}\d -]+$/, "Nom d'inventaire non valide. Réessayez avec un format valide : ");
+    my @inventories = get_inventories();
+    my $new_inventory_name = "";
+    while (1) {
+        $new_inventory_name = input_check(qr/^[\p{L}\d_-]+$/, "Format non valide. Nommez votre nouvel inventaire : ");
+        last if (not any {$_ eq $new_inventory_name} @inventories);
+        print "Un inventaire porte déjà le nom de \"$new_inventory_name\".\nVeuillez choisir un nom différent : ";
+    }
 
     print "\nEntrez les noms des macro-catégories que contiendra votre inventaire.\n(Entrez \"/\" une fois toutes vos catégories inscrites)\n";
     my $macrocategory_number = 1;
     my @macrocategories;
     print "Catégorie 1 : ";
-    my $macrocategory_name = input_check(qr/^[^\/]+$/, "Vous devez entrer au moins une catégorie !\nCatégorie 1 : ");
+    my $macrocategory_name = input_check(qr/^[^\s\/](.*[^\s])*$/, "Vous devez entrer au moins une catégorie valide !\nCatégorie 1 : ");
     while ($macrocategory_name ne "/") {
         push @macrocategories, $macrocategory_name;
         print "Catégorie " . ++$macrocategory_number . " : ";
-        $macrocategory_name = input_check(qr/^[^\n]+$/, "Catégorie " . $macrocategory_number . " : ");
+        $macrocategory_name = input_check(qr/^[^\s](.*[^\s])*$/, "Catégorie " . $macrocategory_number . " : ");
     }
     
     my %new_inventory = new_inventory(@macrocategories);
@@ -235,6 +245,13 @@ sub manage_inventory {
         }
         return $curr_category_ref;
     }
+}
+
+sub get_inventories {
+    my @inventories_paths = glob "$FindBin::Bin/inventories/*";
+    my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
+    return @inventories;
+
 }
 
 sub input_check {
