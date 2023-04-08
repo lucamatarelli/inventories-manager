@@ -107,7 +107,7 @@ sub create_inventory {
     while ($macrocategory_name ne "/") {
         push @macrocategories, $macrocategory_name;
         print "Catégorie " . ++$macrocategory_number . " : ";
-        $macrocategory_name = input_check(qr/^[^\s](.*[^\s])*$/, "Catégorie " . $macrocategory_number . " : ");
+        $macrocategory_name = input_check(qr/^[^\s](.*[^\s])*$/, "Format non valide. Catégorie " . $macrocategory_number . " : ");
     }
     
     my %new_inventory = new_inventory(@macrocategories);
@@ -204,15 +204,23 @@ sub manage_inventory {
             $curr_category_ref = pop @subcategories_depth;
         } elsif ($action eq "add_cat") {
             print "Nommez votre nouvelle catégorie : ";
-            my $new_category_name = <STDIN>;
-            chomp $new_category_name;
+            my $new_category_name = "";
+            while (1) {
+                $new_category_name = input_check(qr/^[^\s](.*[^\s])*$/, "Format non valide. Nommez votre nouvelle catégorie : ");
+                last if (not any {$_ eq $new_category_name} @curr_subcategories);
+                print "Une catégorie porte déjà le nom de \"$new_category_name\".\nVeuillez choisir un nom différent : ";
+            }
             add_category($curr_category_ref, $new_category_name);
         } elsif ($action eq "ren_cat") {
             print "Quelle catégorie souhaitez-vous renommer ? ";
             my $category_to_rename = input_check(qr/^($curr_subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
             print "Indiquez le nouveau nom de [" . $category_to_rename . "] : ";
-            my $category_new_name = <STDIN>;
-            chomp $category_new_name;
+            my $category_new_name = "";
+            while (1) {
+                $category_new_name = input_check(qr/^[^\s](.*[^\s])*$/, "Format non valide. Nommez votre nouvelle catégorie : ");
+                last if (not any {$_ eq $category_new_name} @curr_subcategories);
+                print "Une catégorie porte déjà le nom de \"$category_new_name\".\nVeuillez choisir un nom différent : ";
+            }
             rename_category($curr_category_ref, $category_to_rename, $category_new_name);
         } elsif ($action eq "mv_cat") {
             
