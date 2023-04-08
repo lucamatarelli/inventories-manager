@@ -83,23 +83,7 @@ sub move_category {}
 
 sub remove_category {
     my ($curr_category_ref, $category) = @_;
-
-    my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref->{$category})};
-    my @curr_items = @{get_curr_items_ref($curr_category_ref->{$category})};
-
-    if ((scalar @curr_subcategories == 0) and (scalar @curr_items == 0)) {
-        delete $curr_category_ref->{$category};
-    } else {
-        # Afficher tous les items et sous-catégories (ainsi que leurs tailles respectives) contenus dans $category !
-        # print "Cette catégorie contient les items suivants : " . join(" ; ", @category_items) . ".\n";
-        print "Êtes-vous certain de vouloir supprimer cette catégorie et ces items ? (o/n) ";
-        my $input = <STDIN>;
-        while ($input !~ /^o\n|n\n$/i) {
-            print "Êtes-vous certain de vouloir supprimer cette catégorie et ces items ? (o/n) ";
-            $input = <STDIN>;
-        }
-        delete $curr_category_ref->{$category} if ($input =~ /o\n/i);
-    }
+    delete $curr_category_ref->{$category};
 }
 
 1;

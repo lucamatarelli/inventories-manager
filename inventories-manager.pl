@@ -227,7 +227,17 @@ sub manage_inventory {
         } elsif ($action eq "rm_cat") {
             print "Quelle catégorie souhaitez-vous supprimer ? ";
             my $category_to_remove = input_check(qr/^($curr_subcategories_disjunction)$/, "Veuillez entrer un nom de catégorie valide : ");
-            remove_category($curr_category_ref, $category_to_remove);
+
+            my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref->{$category_to_remove})};
+            my @curr_items = @{get_curr_items_ref($curr_category_ref->{$category_to_remove})};
+
+            if ((scalar @curr_subcategories == 0) and (scalar @curr_items == 0)) {
+                remove_category($curr_category_ref, $category_to_remove);
+            } else {
+                print "\nCette catégorie contient des éléments. Êtes-vous certain de vouloir supprimer tout ce contenu (o/n) ? ";
+                my $rm_confirm = input_check(qr/^[on]$/i, "Choix non valide. Êtes-vous sûr de vouloir supprimer [$category_to_remove] (o/n) ? ");
+                remove_category($curr_category_ref, $category_to_remove) if ($rm_confirm =~ /^[oO]$/);
+            }
         } elsif ($action eq "add_it") {
             print "Nouvel item : ";
             my $new_item = <STDIN>;
