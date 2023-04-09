@@ -14,6 +14,7 @@ our @EXPORT = qw(
 );
 
 use List::Util qw(first);
+use Unicode::Collate;
 
 sub new_inventory {
     my @categories = @_;
@@ -64,12 +65,13 @@ sub category_to_string {
     my ($curr_category_ref) = @_;
     my $category_content = "";
     my @curr_items = @{get_curr_items_ref($curr_category_ref)};
-    my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref)};
+    my $Collator = Unicode::Collate->new();
+    my @curr_subcategories_sorted = $Collator->sort(@{get_curr_subcategories_ref($curr_category_ref)});
     if (scalar @curr_items != 0) {
         $category_content .= "- " . $_ . "\n" for (@curr_items);
     }
-    if (scalar @curr_subcategories != 0) {
-        $category_content .= "[" . $_ . "]" . "\n" for (@curr_subcategories);
+    if (scalar @curr_subcategories_sorted != 0) {
+        $category_content .= "[" . $_ . "]" . "\n" for (@curr_subcategories_sorted);
     }
     return $category_content;
 }
