@@ -4,6 +4,7 @@ use utf8;
 
 use FindBin;
 use lib "$FindBin::Bin";
+use Encode qw(encode);
 use File::Copy;
 use List::Util qw(any);
 use Storable;
@@ -61,7 +62,7 @@ sub main_loop_menu {
         } elsif ($action_choice eq "open_inv") {
                 print "\nQuel inventaire souhaitez-vous ouvrir ? ";
                 my $inventory_to_open_name = input_check(qr/^($inventories_disjunction)$/, "Veuillez saisir un nom d'inventaire valide : ");
-                my $inventory_to_open_ref = retrieve "$FindBin::Bin/inventories/$inventory_to_open_name";
+                my $inventory_to_open_ref = retrieve encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_open_name");
                 manage_inventory($inventory_to_open_ref, $inventory_to_open_name);
         } elsif ($action_choice eq "ren_inv") {
             print "\nQuel inventaire souhaitez-vous renommer ? ";
@@ -75,7 +76,7 @@ sub main_loop_menu {
                 print "Un inventaire porte déjà le nom de \"$inventory_new_name\".\nVeuillez choisir un nom différent : ";
             }
 
-            move "$FindBin::Bin/inventories/$inventory_to_rename", "$FindBin::Bin/inventories/$inventory_new_name";
+            move "$FindBin::Bin/inventories/$inventory_to_rename", encode("CP-1252", "$FindBin::Bin/inventories/$inventory_new_name");
         } elsif ($action_choice eq "rm_inv") {
             print "\nQuel inventaire souhaitez-vous supprimer ? ";
             my $inventory_to_remove = input_check(qr/^($inventories_disjunction)$/, "Veuillez saisir un nom d'inventaire valide : ");
@@ -126,7 +127,7 @@ sub manage_inventory {
         if (ref $action_result eq "HASH") {
             $curr_category_ref = $action_result;
         } else {
-            store $inventory_ref, "$FindBin::Bin/inventories/$inventory_name" if $action_result =~ /-SV$/;
+            store $inventory_ref, encode("CP-1252", "$FindBin::Bin/inventories/$inventory_name") if $action_result =~ /-SV$/;
         }
     }
 }
