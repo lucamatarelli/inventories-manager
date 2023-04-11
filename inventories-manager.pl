@@ -247,15 +247,13 @@ sub manage_inventory {
             }
         } elsif ($action eq "add_it") {
             print "> Nouvel item : ";
-            my $new_item = <STDIN>;
-            chomp $new_item;
+            my $new_item = input_check(qr/^[^\s](.*[^\s])*$/, "> Format non valide. Nommez votre nouvel item : ");
             add_item($curr_category_ref, $new_item);
         } elsif ($action eq "ren_it") {
             print "> Quel item souhaitez-vous renommer ? ";
             my $item_to_rename = input_check(qr/^($curr_items_disjunction)$/, "> Veuillez entrer un nom d'item valide : ");
-            print "> Indiquez le nouveau nom de \"" . $item_to_rename . "\" : "; 
-            my $item_new_name = <STDIN>;
-            chomp $item_new_name;
+            print "> Indiquez le nouveau nom de \"" . colored($item_to_rename, "yellow") . "\" : "; 
+            my $item_new_name = input_check(qr/^[^\s](.*[^\s])*$/, "> Format non valide. Indiquez le nouveau nom de \"$item_to_rename\" : ");
             rename_item($curr_category_ref, $item_to_rename, $item_new_name);
         } elsif ($action eq "mv_it") {
             
