@@ -48,13 +48,17 @@ sub rename_item {
     }
 }
 
-sub move_item {}
-
 sub remove_item {
     my ($curr_category_ref, $item) = @_;
     my @curr_items = @{get_curr_items_ref($curr_category_ref)};
     my $item_index = first {$curr_items[$_] eq $item} 0..@curr_items-1;
     splice(@{get_curr_items_ref($curr_category_ref)}, $item_index, 1);
+}
+
+sub move_item {
+    my ($curr_category_ref, $target_category_ref, $item) = @_;
+    remove_item($curr_category_ref, $item);
+    add_item($target_category_ref, $item);
 }
 
 sub add_category {
@@ -82,11 +86,15 @@ sub rename_category {
     $curr_category_ref->{$new_name} = delete $curr_category_ref->{$category};
 }
 
-sub move_category {}
-
 sub remove_category {
     my ($curr_category_ref, $category) = @_;
-    delete $curr_category_ref->{$category};
+    return delete $curr_category_ref->{$category};
+}
+
+sub move_category {
+    my ($curr_category_ref, $target_category_ref, $category) = @_;
+    my $moving_category_ref = remove_category($curr_category_ref, $category);
+    $target_category_ref->{$category} = $moving_category_ref;
 }
 
 1;
