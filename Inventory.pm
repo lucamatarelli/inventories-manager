@@ -14,6 +14,7 @@ our @EXPORT = qw(
 );
 
 use List::Util qw(first);
+use Term::ANSIColor;
 use Unicode::Collate;
 
 sub new_inventory {
@@ -67,11 +68,11 @@ sub category_to_string {
     my @curr_items = @{get_curr_items_ref($curr_category_ref)};
     my $Collator = Unicode::Collate->new();
     my @curr_subcategories_sorted = $Collator->sort(@{get_curr_subcategories_ref($curr_category_ref)});
-    if (scalar @curr_items != 0) {
-        $category_content .= "- " . $_ . "\n" for (@curr_items);
-    }
     if (scalar @curr_subcategories_sorted != 0) {
-        $category_content .= "[" . $_ . "]" . "\n" for (@curr_subcategories_sorted);
+        $category_content .= "[" . colored($_, "green") . "]" . "\n" for (@curr_subcategories_sorted);
+    }
+    if (scalar @curr_items != 0) {
+        $category_content .= "- " . colored($_, "yellow") . "\n" for (@curr_items);
     }
     return $category_content;
 }
