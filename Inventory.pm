@@ -1,3 +1,89 @@
+=head1 NAME
+
+Inventory - Module for low-level manipulation routines on inventory data structure
+
+=head1 SYNOPSIS
+
+    use Inventory;
+
+    # Create a new inventory with specified macro-categories
+    my %new_inventory = new_inventory('Category1', 'Category2', ...);
+
+    # Add a new item to the current category
+    add_item($curr_category_ref, 'New_Item');
+
+    # Move an item from one category to another
+    move_item($curr_category_ref, $target_category_ref, 'Item_to_Move');
+
+    # Add a new category to the current category
+    add_category($curr_category_ref, 'New_Category');
+
+    # Convert the current category structure to a string representation
+    my $category_string = category_to_string($curr_category_ref);
+
+    # Remove a category from the current category
+    remove_category($curr_category_ref, 'Category_to_Remove');
+
+=head1 DESCRIPTION
+
+The Inventory module provides low-level manipulation routines for handling inventory data structures. It includes functions for managing items and categories within an inventory.
+
+=head1 EXPORTED FUNCTIONS
+
+=head2 new_inventory(@categories)
+
+Create a new inventory with the specified macro-categories.
+
+=head2 get_curr_items_ref($curr_category_ref)
+
+Return a reference to the current items in the given category.
+
+=head2 get_curr_subcategories_ref($curr_category_ref)
+
+Return a reference to the current subcategories in the given category.
+
+=head2 add_item($curr_category_ref, $new_item)
+
+Add a new item to the current category.
+
+=head2 rename_item($curr_category_ref, $item, $new_name)
+
+Rename an existing item in the current category.
+
+=head2 remove_item($curr_category_ref, $item)
+
+Remove an item from the current category.
+
+=head2 move_item($curr_category_ref, $target_category_ref, $item)
+
+Move an item from one category to another.
+
+=head2 add_category($curr_category_ref, $new_category)
+
+Add a new subcategory to the current category.
+
+=head2 category_to_string($curr_category_ref)
+
+Convert the current category structure to a string representation.
+
+=head2 rename_category($curr_category_ref, $category, $new_name)
+
+Rename an existing subcategory in the current category.
+
+=head2 remove_category($curr_category_ref, $category)
+
+Remove a subcategory from the current category.
+
+=head2 move_category($curr_category_ref, $target_category_ref, $category)
+
+Move a subcategory from one category to another.
+
+=head1 AUTHOR
+
+Luca Matarelli
+
+=cut
+
 package Inventory;
 
 use strict;
