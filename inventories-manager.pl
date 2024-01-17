@@ -37,7 +37,7 @@ sub main_loop_menu {
             print "\nAucun inventaire disponible.\n";
         } else {
             print "\nInventaires disponibles :\n";
-            print "-> " . colored($_ . "\n", "cyan") for (@inventories);
+            print "-> " . colored($_ . "\n", "magenta") for (@inventories);
         }
 
         # Display menu options
@@ -60,10 +60,13 @@ sub main_loop_menu {
         $valid_options{$option_nb} = "EXIT";
 
         # Ask user input for action
-        print "> Entrez le numéro de l'action à effectuer : ";
         my $option_choice_nb = scalar @inventories != 0 ?
-            input_check(qr/^[12345]$/, "> Veuillez entrer un numéro d'action valide : ") :
-            input_check(qr/^[12]$/, "> Veuillez entrer un numéro d'action valide : ");
+            input_check("> Entrez le numéro de l'action à effectuer : ",
+                        qr/^[12345]$/,
+                        "> Veuillez entrer un numéro d'action valide : ") :
+            input_check("> Entrez le numéro de l'action à effectuer : ",
+                        qr/^[12]$/,
+                        "> Veuillez entrer un numéro d'action valide : ");
         $action_choice = $valid_options{$option_choice_nb};
 
         # Perform action based on user choice
@@ -73,40 +76,40 @@ sub main_loop_menu {
             manage_inventory($new_inventory_ref, $new_inventory_name);
         } elsif ($action_choice eq "open_inv") {
             # Open an existing inventory
-            print "\n> Quel inventaire souhaitez-vous ouvrir ? ";
-            my $inventory_to_open_name = input_check(qr/^($inventories_disjunction)$/,
-                "> Veuillez saisir un nom d'inventaire valide : ");
+            my $inventory_to_open_name = input_check("\n> Entrez le nom de l'inventaire à ouvrir : ",
+                                                     qr/^($inventories_disjunction)$/,
+                                                     "> Veuillez saisir un nom d'inventaire valide : ");
             my $inventory_to_open_ref = retrieve encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_open_name");
             manage_inventory($inventory_to_open_ref, $inventory_to_open_name);
         } elsif ($action_choice eq "ren_inv") {
             # Rename an existing inventory
-            print "\n> Quel inventaire souhaitez-vous renommer ? ";
-            my $inventory_to_rename = input_check(qr/^($inventories_disjunction)$/,
-                "> Veuillez saisir un nom d'inventaire valide : ");
+            my $inventory_to_rename = input_check("\n> Entrez le nom de l'inventaire à renommer : ",
+                                                  qr/^($inventories_disjunction)$/,
+                                                  "> Veuillez saisir un nom d'inventaire valide : ");
 
-            print "> Indiquez le nouveau nom de {" . colored($inventory_to_rename, "cyan") . "} : ";
             my $inventory_new_name = "";
             while (1) {
-                $inventory_new_name = input_check(qr/^[\p{L}\d_-]+$/,
-                    "> Format non valide. Indiquez le nouveau nom de {$inventory_to_rename} : ");
+                $inventory_new_name = input_check("> Indiquez le nouveau nom de {<MAGENTA_BEGIN>$inventory_to_rename<MAGENTA_END>} : ",
+                                                  qr/^[\p{L}\d_-]+$/,
+                                                  "> Format non valide. Indiquez le nouveau nom de {<MAGENTA_BEGIN>$inventory_to_rename<MAGENTA_END>} : ");
                 last if (not any {$_ eq $inventory_new_name} @inventories);
-                print colored("Un inventaire porte déjà le nom de \"$inventory_new_name\".\n> Veuillez choisir un nom différent : ",
-                        "red");
+                print colorize("<RED_BEGIN>Un inventaire porte déjà le nom de \"<MAGENTA_BEGIN>$inventory_new_name<MAGENTA_END>\". Veuillez choisir un nom différent.\n<RED_END>");
             }
 
             move "$FindBin::Bin/inventories/$inventory_to_rename", encode("CP-1252", "$FindBin::Bin/inventories/$inventory_new_name");
         } elsif ($action_choice eq "rm_inv") {
             # Remove an existing inventory
-            print "\n> Quel inventaire souhaitez-vous supprimer ? ";
-            my $inventory_to_remove = input_check(qr/^($inventories_disjunction)$/,
-                "> Veuillez saisir un nom d'inventaire valide : ");
+            my $inventory_to_remove = input_check("\n> Entrez le nom de l'inventaire à supprimer : ",
+                                                  qr/^($inventories_disjunction)$/,
+                                                  "> Veuillez saisir un nom d'inventaire valide : ");
 
-            print "\nCette opération supprimera irréversiblement l'inventaire {"
-                . colored($inventory_to_remove, "cyan")
-                . "} et son contenu.\n";
-            print "> Êtes-vous sûr de vouloir continuer (o/n) ? ";
-            my $rm_confirm = input_check(qr/^[on]$/i,
-                "> Choix non valide. Êtes-vous sûr de vouloir supprimer {$inventory_to_remove} (o/n) ? ");
+            my $rm_confirm = input_check(
+                "\nCette opération supprimera irréversiblement l'inventaire {<MAGENTA_BEGIN>"
+                    . $inventory_to_remove
+                    . "<MAGENTA_END>} et son contenu.\n"
+                    . "> Êtes-vous sûr de vouloir continuer (o/n) ? ",
+                qr/^[on]$/i,
+                "> Choix non valide. Êtes-vous sûr de vouloir supprimer {<MAGENTA_BEGIN>$inventory_to_remove<MAGENTA_END>} (o/n) ? ");
 
             unlink encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_remove") if ($rm_confirm =~ /^[oO]$/);            
         }
@@ -116,15 +119,16 @@ sub main_loop_menu {
 # Create a new inventory
 # RETURNS : a reference to the newly created inventory hash and its name (string)
 sub create_inventory {
-    print "\n> Nommez votre nouvel inventaire : ";
     my @inventories = get_inventories();
     my $new_inventory_name = "";
 
     # Ensure a unique name for the new inventory
     while (1) {
-        $new_inventory_name = input_check(qr/^[\p{L}\d_-]+$/, "> Format non valide. Nommez votre nouvel inventaire : ");
+        $new_inventory_name = input_check("\n> Nommez votre nouvel inventaire : ",
+                                          qr/^[\p{L}\d_-]+$/,
+                                          "> Format non valide. Nommez votre nouvel inventaire : ");
         last if (not any {$_ eq $new_inventory_name} @inventories);
-        print colored("Un inventaire porte déjà le nom de \"$new_inventory_name\".\n> Veuillez choisir un nom différent : ", "red");
+        print colorize("<RED_BEGIN>Un inventaire porte déjà le nom de \"<MAGENTA_BEGIN>$new_inventory_name<MAGENTA_END>\". Veuillez choisir un nom différent.\n<RED_END>");
     }
 
     print "\nEntrez les noms des macro-catégories que contiendra votre inventaire.\n";
@@ -133,13 +137,14 @@ sub create_inventory {
     my @macrocategories;
     
     # Loop to gather macro-category names
-    print "> Catégorie 1 : ";
-    my $macrocategory_name = input_check(qr/^[^\s\/](.*[^\s])*$/,
-        "Vous devez entrer au moins une catégorie valide !\n> Catégorie 1 : ");
+    my $macrocategory_name = input_check("> Catégorie 1 : ",
+                                         qr/^[^\s\/](.*[^\s])*$/,
+                                         "Vous devez entrer au moins une catégorie valide !\n> Catégorie 1 : ");
     while ($macrocategory_name ne "/") {
         push @macrocategories, $macrocategory_name;
-        print "> Catégorie " . ++$macrocategory_number . " : ";
-        $macrocategory_name = input_check(qr/^[^\s](.*[^\s])*$/, "> Format non valide. Catégorie " . $macrocategory_number . " : ");
+        $macrocategory_name = input_check("> Catégorie " . ++$macrocategory_number . " : ",
+                                          qr/^[^\s](.*[^\s])*$/,
+                                          "> Format non valide. Catégorie " . $macrocategory_number . " : ");
     }
     
     # Create a new inventory and return it
@@ -191,7 +196,7 @@ sub manage_inventory {
 
         # Display information about the current inventory/category state
         print "-" x 100;
-        print "\nInventaire {". colored($inventory_name, "cyan") . "} ";
+        print "\nInventaire {". colored($inventory_name, "magenta") . "} ";
         print scalar @subcategories_names_depth != 0 ?
                 "| Catégorie [" . colored(join("/", @subcategories_names_depth), "green") . "] : \n\n" :
                 ":\n\n";
@@ -235,9 +240,10 @@ sub manage_inventory {
         $valid_options{$option_nb} = "quit_nosave";
 
         # Prompt for user choice
-        print "> Entrez le numéro de l'action à effectuer : ";
         my $valid_options_disjunction = join "|", keys %valid_options;
-        my $option_choice_nb = input_check(qr/^($valid_options_disjunction)$/, "> Veuillez entrer un numéro d'action valide : ");
+        my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
+                                           qr/^($valid_options_disjunction)$/,
+                                           "> Veuillez entrer un numéro d'action valide : ");
         # Return the chosen action
         return $valid_options{$option_choice_nb};
     }
@@ -257,9 +263,9 @@ sub manage_inventory {
         if ($action eq "go_to") {
             # Go into a subcategory
             push @subcategories_refs_depth, $curr_category_ref;
-            print "> Déplacement vers quelle catégorie ? ";
-            my $new_curr_category = input_check(qr/^($curr_subcategories_disjunction)$/,
-                "> Veuillez entrer un nom de catégorie valide : ");
+            my $new_curr_category = input_check("> Entrez le nom de la catégorie vers laquelle se déplacer : ",
+                                                qr/^($curr_subcategories_disjunction)$/,
+                                                "> Veuillez entrer un nom de catégorie valide : ");
             $curr_category_ref = $curr_category_ref->{$new_curr_category};
             push @subcategories_names_depth, $new_curr_category;  
         } elsif ($action eq "go_up") {
@@ -268,33 +274,32 @@ sub manage_inventory {
             pop @subcategories_names_depth;
         } elsif ($action eq "add_cat") {
             # Add a new category
-            print "> Nommez votre nouvelle catégorie : ";
             my $new_category_name = "";
 
             # Ensure that the new category name is valid and not already in use in the current categories
             while (1) {
-                $new_category_name = input_check(qr/^[^\s](.*[^\s])*$/, "> Format non valide. Nommez votre nouvelle catégorie : ");
+                $new_category_name = input_check("> Entrez le nom de votre nouvelle catégorie : ",
+                                                 qr/^[^\s](.*[^\s])*$/,
+                                                 "> Format non valide. Entrez le nom de votre nouvelle catégorie : ");
                 last if (not any {$_ eq $new_category_name} @curr_subcategories);
-                print colored("Une catégorie porte déjà le nom de \"$new_category_name\".\n> Veuillez choisir un nom différent : ",
-                        "red");
+                print colorize("<RED_BEGIN>Une catégorie porte déjà le nom de \"<GREEN_BEGIN>$new_category_name<GREEN_END>\". Veuillez choisir un nom différent.\n<RED_END>");
             }
 
             add_category($curr_category_ref, $new_category_name);
         } elsif ($action eq "ren_cat") {
             # Rename a category
-            print "> Quelle catégorie souhaitez-vous renommer ? ";
-            my $category_to_rename = input_check(qr/^($curr_subcategories_disjunction)$/,
-                "> Veuillez entrer un nom de catégorie valide : ");
-            print "> Indiquez le nouveau nom de [" . colored($category_to_rename, "green") . "] : ";
+            my $category_to_rename = input_check("> Entrez le nom de la catégorie à renommer : ",
+                                                 qr/^($curr_subcategories_disjunction)$/,
+                                                 "> Veuillez entrer un nom de catégorie valide : ");
             my $category_new_name = "";
 
             # Ensure that the new category name is valid and not already in use in the current categories
             while (1) {
-                $category_new_name = input_check(qr/^[^\s](.*[^\s])*$/,
-                    "> Format non valide. Indiquez le nouveau nom de [$category_to_rename] : ");
+                $category_new_name = input_check("> Entrez le nouveau nom de [<GREEN_BEGIN>$category_to_rename<GREEN_END>] : ",
+                                                 qr/^[^\s](.*[^\s])*$/,
+                                                 "> Format non valide. Entrez le nouveau nom de [<GREEN_BEGIN>$category_to_rename<GREEN_END>] : ");
                 last if (not any {$_ eq $category_new_name} @curr_subcategories);
-                print colored("Une catégorie porte déjà le nom de \"$category_new_name\".\n> Veuillez choisir un nom différent : ",
-                        "red");
+                print colorize("<RED_BEGIN>Une catégorie porte déjà le nom de \"<GREEN_BEGIN>$category_new_name<GREEN_END>\". Veuillez choisir un nom différent.\n<RED_END>");
             }
             
             rename_category($curr_category_ref, $category_to_rename, $category_new_name);
@@ -303,9 +308,9 @@ sub manage_inventory {
             
         } elsif ($action eq "rm_cat") {
             # Remove a category
-            print "> Quelle catégorie souhaitez-vous supprimer ? ";
-            my $category_to_remove = input_check(qr/^($curr_subcategories_disjunction)$/,
-                "> Veuillez entrer un nom de catégorie valide : ");
+            my $category_to_remove = input_check("> Entrez le nom de la catégorie à supprimer : ",
+                                                 qr/^($curr_subcategories_disjunction)$/,
+                                                 "> Veuillez entrer un nom de catégorie valide : ");
 
             my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref->{$category_to_remove})};
             my @curr_items = @{get_curr_items_ref($curr_category_ref->{$category_to_remove})};
@@ -316,34 +321,38 @@ sub manage_inventory {
                 remove_category($curr_category_ref, $category_to_remove);
             } else {
                 # Category contains elements, ask for confirmation
-                print "\n> La catégorie ["
-                    . colored($category_to_remove, "green")
-                    . "] contient des éléments. Êtes-vous certain de vouloir supprimer tout son contenu (o/n) ? ";
-                my $rm_confirm = input_check(qr/^[on]$/i,
-                    "> Choix non valide. Êtes-vous sûr de vouloir supprimer [$category_to_remove] (o/n) ? ");
+                my $rm_confirm = input_check(
+                    "\n> La catégorie [<GREEN_BEGIN>"
+                        . $category_to_remove
+                        . "<GREEN_END>] contient des éléments. Êtes-vous certain de vouloir supprimer tout son contenu (o/n) ? ",
+                    qr/^[on]$/i,
+                    "> Choix non valide. Êtes-vous sûr de vouloir supprimer [<GREEN_BEGIN>$category_to_remove<GREEN_END>] (o/n) ? ");
                 # Remove the category if the user confirms
                 remove_category($curr_category_ref, $category_to_remove) if ($rm_confirm =~ /^[oO]$/);
             }
         } elsif ($action eq "add_it") {
             # Add a new item
-            print "> Nouvel item : ";
-            my $new_item = input_check(qr/^[^\s](.*[^\s])*$/, "> Format non valide. Nommez votre nouvel item : ");
+            my $new_item = input_check("> Entrez le nom du nouvel item : ",
+                                       qr/^[^\s](.*[^\s])*$/,
+                                       "> Format non valide. Entrez le nom du nouvel item : ");
             add_item($curr_category_ref, $new_item);
         } elsif ($action eq "ren_it") {
             # Rename an item
-            print "> Quel item souhaitez-vous renommer ? ";
-            my $item_to_rename = input_check(qr/^($curr_items_disjunction)$/, "> Veuillez entrer un nom d'item valide : ");
-            print "> Indiquez le nouveau nom de \"" . colored($item_to_rename, "yellow") . "\" : "; 
-            my $item_new_name = input_check(qr/^[^\s](.*[^\s])*$/,
-                "> Format non valide. Indiquez le nouveau nom de \"$item_to_rename\" : ");
+            my $item_to_rename = input_check("> Entrez le nom de l'item à renommer : ",
+                                             qr/^($curr_items_disjunction)$/,
+                                             "> Veuillez entrer un nom d'item valide : ");
+            my $item_new_name = input_check("> Entrez le nouveau nom de \"<YELLOW_BEGIN>$item_to_rename<YELLOW_END>\" : ",
+                                            qr/^[^\s](.*[^\s])*$/,
+                                            "> Format non valide. Entrez le nouveau nom de \"<YELLOW_BEGIN>$item_to_rename<YELLOW_END>\" : ");
             rename_item($curr_category_ref, $item_to_rename, $item_new_name);
         } elsif ($action eq "mv_it") {
             # Move an item
             
         } elsif ($action eq "rm_it") {
             # Remove an item
-            print "> Quel item souhaitez-vous supprimer ? ";
-            my $item_to_remove = input_check(qr/^($curr_items_disjunction)$/, "> Veuillez entrer un nom d'item valide : ");
+            my $item_to_remove = input_check("> Entrez le nom de l'item à supprimer ? ",
+                                             qr/^($curr_items_disjunction)$/,
+                                             "> Veuillez entrer un nom d'item valide : ");
             remove_item($curr_category_ref, $item_to_remove);
         } elsif ($action eq "quit_save") {
             # Quit and save the inventory
@@ -368,18 +377,47 @@ sub get_inventories {
 }
 
 # Utility routine: prompt message, check user input and display error message if needed
-# PARAMS : a regular expression pattern to test the user input with and a message to display in case of mismatch (string)
+# PARAMS : a prompt message (string), 
+#          a regular expression pattern to test the user input with
+#          and a message to display in case of mismatch (string)
 # RETURNS : the finally accepted user input
 sub input_check {
-    my ($pattern, $fail_msg) = @_;
+    my ($prompt_message, $pattern, $fail_message) = @_;
+    print colorize("<CYAN_BEGIN>" . $prompt_message . "<CYAN_END>");
     my $user_input = <STDIN>;
     chomp $user_input;
     while ($user_input !~ $pattern) {
-        print colored($fail_msg, "red");
+        print colorize("<RED_BEGIN>" . $fail_message . "<RED_END>");
         $user_input = <STDIN>;
         chomp $user_input;
     }
     return $user_input;
+}
+
+# Utility routine: integrate nested colors schemes
+# PARAMS : a string containing schemes of <COLOR_BEGIN> and <COLOR_END>
+# RETURNS : the input string with all schemes properly replaced with corresponding colors
+sub colorize {
+    my ($string) = @_;
+
+    my @color_stack;
+    my @strings_to_colorize = grep { $_ ne '' } split(/<[A-Z]+_(?:BEGIN|END)>/, $string);
+    my $colorized_string;
+
+    my $color_boundaries_counter = 0;
+    while ($string =~ /<([A-Z]+)_(BEGIN|END)>/g) {
+        if ($2 eq "BEGIN") {
+            push @color_stack, $1;
+        } elsif ($2 eq "END") {
+            pop @color_stack;
+        }
+        $colorized_string .= colored($strings_to_colorize[$color_boundaries_counter], lc $color_stack[-1]);
+        $color_boundaries_counter++;
+        if ($color_boundaries_counter == @strings_to_colorize) {
+            last;
+        }
+    }
+    return $colorized_string;
 }
 
 
