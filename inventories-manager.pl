@@ -11,6 +11,7 @@ use FindBin;
 use lib "$FindBin::Bin";
 use Encode qw(encode);
 use File::Copy;
+use GraphViz2;
 use List::Util qw(any);
 use Storable;
 use Term::ANSIColor;
@@ -46,7 +47,7 @@ sub main_loop_menu {
 
         print "\nQue souhaitez-vous faire ?\n";
 
-        print ++$option_nb . ". Créer un nouvel inventaire\n";
+        print ++$option_nb . ". Ajouter un inventaire\n";
         $valid_options{$option_nb} = "add_inv";
         if (scalar @inventories != 0) {
             print ++$option_nb . ". Ouvrir un inventaire\n";
@@ -55,18 +56,17 @@ sub main_loop_menu {
             $valid_options{$option_nb} = "ren_inv";
             print ++$option_nb . ". Supprimer un inventaire\n";
             $valid_options{$option_nb} = "rm_inv";
+            print ++$option_nb . ". Visualiser l'inventaire\n";
+            $valid_options{$option_nb} = "viz_inv";        
         }
         print ++$option_nb . ". Quitter le gestionnaire\n\n";
         $valid_options{$option_nb} = "EXIT";
 
         # Ask user input for action
-        my $option_choice_nb = scalar @inventories != 0 ?
-            input_check("> Entrez le numéro de l'action à effectuer : ",
-                        qr/^[12345]$/,
-                        "> Veuillez entrer un numéro d'action valide : ") :
-            input_check("> Entrez le numéro de l'action à effectuer : ",
-                        qr/^[12]$/,
-                        "> Veuillez entrer un numéro d'action valide : ");
+        my $options_numbers = join "", 1..keys %valid_options;
+        my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
+                                           qr/^[$options_numbers]$/,
+                                           "> Veuillez entrer un numéro d'action valide : ");
         $action_choice = $valid_options{$option_choice_nb};
 
         # Perform action based on user choice
@@ -112,7 +112,17 @@ sub main_loop_menu {
                 "> Choix non valide. Êtes-vous sûr de vouloir supprimer {<MAGENTA_BEGIN>$inventory_to_remove<MAGENTA_END>} (o/n) ? ");
 
             unlink encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_remove") if ($rm_confirm =~ /^[oO]$/);            
-        }
+        } elsif ($action_choice eq "viz_inv") {
+            # Save a graph representation of a whole inventory as an external PNG image
+            my $inventory_to_visualize_name = input_check("\n> Entrez le nom de l'inventaire à visualiser : ",
+                                                          qr/^($inventories_disjunction)$/,
+                                                          "> Veuillez saisir un nom d'inventaire valide : ");
+            my $inventory_to_visualize_ref = retrieve encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_visualize_name");
+            visualize_inventory($inventory_to_visualize_ref, $inventory_to_visualize_name);
+            print "\nVisualisation de l'inventaire {" . colored($inventory_to_visualize_name, "magenta") . "} générée";
+            print " et accessible dans l'image " . colored("$inventory_to_visualize_name.png", "magenta") . ".\n\n";
+            sleep 2;
+        } 
     }
 }
 
@@ -305,7 +315,7 @@ sub manage_inventory {
             rename_category($curr_category_ref, $category_to_rename, $category_new_name);
         } elsif ($action eq "mv_cat") {
             # Move a category
-            
+            # TO DO            
         } elsif ($action eq "rm_cat") {
             # Remove a category
             my $category_to_remove = input_check("> Entrez le nom de la catégorie à supprimer : ",
@@ -347,7 +357,7 @@ sub manage_inventory {
             rename_item($curr_category_ref, $item_to_rename, $item_new_name);
         } elsif ($action eq "mv_it") {
             # Move an item
-            
+            # TO DO            
         } elsif ($action eq "rm_it") {
             # Remove an item
             my $item_to_remove = input_check("> Entrez le nom de l'item à supprimer ? ",
@@ -380,7 +390,7 @@ sub get_inventories {
 # PARAMS : a prompt message (string), 
 #          a regular expression pattern to test the user input with
 #          and a message to display in case of mismatch (string)
-# RETURNS : the finally accepted user input
+# RETURNS : the final accepted user input
 sub input_check {
     my ($prompt_message, $pattern, $fail_message) = @_;
     print colorize("<CYAN_BEGIN>" . $prompt_message . "<CYAN_END>");
@@ -418,6 +428,68 @@ sub colorize {
         }
     }
     return $colorized_string;
+}
+
+# Generate a graphic representation of a whole given inventory, saved to an external image file
+# PARAMS : inventory reference (hashref) and inventory name (string)
+sub visualize_inventory {
+    my ($inventory_ref, $inventory_name) = @_;
+
+    my $inventory_graph = GraphViz2->new(
+        edge   => {color => "black"},
+        global => {directed => 1},
+    );
+
+    # Recursive subroutine to add nodes and edges to the graph
+    # PARAMS : the graph object to add nodes and edges to,
+    #          the name of the current node's parent (string),
+    #          the actual complex data structure to process (hashref)
+    sub add_nodes_and_edges {
+        my ($graph, $parent, $data) = @_;
+
+        for my $key (keys %$data) {
+            my $node = "$parent/$key";
+
+            if ($key eq 'items') {
+                # Skip empty "items" nodes        
+                next if ref $data->{$key} eq "ARRAY" && !@{$data->{$key}};
+            } else {
+                # Add the current node if it is not just an "items" key
+                $graph->add_node(name => $node, label => $key,
+                                 color => "green3", style => "filled");
+                $graph->add_edge(from => $parent, to => $node);
+            }
+
+            # Recursively process subcategories if the value is a hash reference
+            if (ref $data->{$key} eq "HASH") {
+                add_nodes_and_edges($graph, $node, $data->{$key});
+            } elsif (ref $data->{$key} eq "ARRAY" && @{$data->{$key}}) {
+                # Add a node for each item if the value is an array with content
+                for my $item (@{$data->{$key}}) {
+                    $graph->add_node(name => "$node/$item", label => $item,
+                                     shape => "box", color => "yellow3", style => "filled");
+                    # Reattach the items to their parent category, glossing over the ignored "items" key
+                    $graph->add_edge(from => $node =~ s/\/items//r, to => "$node/$item");
+                }
+            }
+        }
+    }
+
+    # Initialize the graph
+    $inventory_graph->add_node(name => "root", label => $inventory_name,
+                     shape => "diamond", color => "magenta3", style => "filled");
+
+    # Build the graph
+    add_nodes_and_edges($inventory_graph, "root", $inventory_ref);
+
+    # Save the graph as external PNG file
+    $inventory_graph->run(format => "png", output_file => encode("CP-1252", "$inventory_name.png"));
+
+    # Reapply encoding layers because "run" method resets them
+    if ($^O eq "MSWin32") {
+        binmode STDOUT, ":encoding(CP-850)";
+        binmode STDIN, ":encoding(CP-850)";
+    }
 }
 
 
