@@ -72,7 +72,7 @@ sub main_loop_menu {
         # Perform action based on user choice
         if ($action_choice eq "add_inv") {
             # Add a new inventory
-            my ($new_inventory_ref, $new_inventory_name) = create_inventory();
+            my ($new_inventory_ref, $new_inventory_name) = add_inventory();
             manage_inventory($new_inventory_ref, $new_inventory_name);
         } elsif ($action_choice eq "open_inv") {
             # Open an existing inventory
@@ -96,7 +96,7 @@ sub main_loop_menu {
                 print colorize("<RED_BEGIN>Un inventaire porte déjà le nom de \"<MAGENTA_BEGIN>$inventory_new_name<MAGENTA_END>\". Veuillez choisir un nom différent.\n<RED_END>");
             }
 
-            move "$FindBin::Bin/inventories/$inventory_to_rename", encode("CP-1252", "$FindBin::Bin/inventories/$inventory_new_name");
+            move encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_rename"), encode("CP-1252", "$FindBin::Bin/inventories/$inventory_new_name");
         } elsif ($action_choice eq "rm_inv") {
             # Remove an existing inventory
             my $inventory_to_remove = input_check("\n> Entrez le nom de l'inventaire à supprimer : ",
@@ -120,7 +120,7 @@ sub main_loop_menu {
             my $inventory_to_visualize_ref = retrieve encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_visualize_name");
             visualize_inventory($inventory_to_visualize_ref, $inventory_to_visualize_name);
             print "\nVisualisation de l'inventaire {" . colored($inventory_to_visualize_name, "magenta") . "} générée";
-            print " et accessible dans l'image " . colored("$inventory_to_visualize_name.png", "magenta") . ".\n\n";
+            print " et accessible dans " . colored("img/$inventory_to_visualize_name.png", "magenta") . ".\n\n";
             sleep 2;
         } 
     }
@@ -128,11 +128,11 @@ sub main_loop_menu {
 
 # Create a new inventory
 # RETURNS : a reference to the newly created inventory hash and its name (string)
-sub create_inventory {
+sub add_inventory {
     my @inventories = get_inventories();
-    my $new_inventory_name = "";
 
     # Ensure a unique name for the new inventory
+    my $new_inventory_name = "";
     while (1) {
         $new_inventory_name = input_check("\n> Nommez votre nouvel inventaire : ",
                                           qr/^[\p{L}\d_-]+$/,
@@ -143,6 +143,7 @@ sub create_inventory {
 
     print "\nEntrez les noms des macro-catégories que contiendra votre inventaire.\n";
     print "(Pour terminer le processus, entrez simplement / en guise de dernière catégorie)\n";
+
     my $macrocategory_number = 1;
     my @macrocategories;
     
@@ -380,6 +381,7 @@ sub manage_inventory {
 # Utility routine: gather the names of all previously created inventories
 # RETURNS : list of all inventories currently available in the "inventories" folder (strings)
 sub get_inventories {
+    mkdir "inventories" if not any {$_ eq "inventories"} glob "*";
     my @inventories_paths = glob "$FindBin::Bin/inventories/*";
     my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
     return @inventories;
@@ -483,12 +485,12 @@ sub visualize_inventory {
     add_nodes_and_edges($inventory_graph, "root", $inventory_ref);
 
     # Save the graph as external PNG file
-    $inventory_graph->run(format => "png", output_file => encode("CP-1252", "$inventory_name.png"));
+    mkdir "img" if not any {$_ eq "img"} glob "*";
+    $inventory_graph->run(format => "png", output_file => encode("CP-1252", "$FindBin::Bin/img/$inventory_name.png"));
 
-    # Reapply encoding layers because "run" method resets them
+    # Reapply encoding layer on standard output because "run" method modifies it
     if ($^O eq "MSWin32") {
         binmode STDOUT, ":encoding(CP-850)";
-        binmode STDIN, ":encoding(CP-850)";
     }
 }
 
