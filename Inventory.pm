@@ -95,8 +95,8 @@ our @ISA = qw(Exporter);
 our @EXPORT = qw(
     new_inventory
     get_curr_items_ref get_curr_subcategories_ref
-    add_item rename_item remove_item
-    add_category category_to_string rename_category remove_category
+    add_item rename_item remove_item move_item
+    add_category category_to_string rename_category remove_category move_category
 );
 
 use List::Util qw(first);
