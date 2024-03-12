@@ -66,21 +66,21 @@ sub add_inventory {
 # PARAMS : current category reference (initially whole inventory) and inventory name (string)
 sub manage_inventory {
     my ($inventory_ref, $inventory_name) = @_;
+
     my $curr_category_ref = $inventory_ref;
-    my $action_result = "";
+    my $chosen_inventory_action = "";
 
     # Main loop for managing a given inventory
-    while ($action_result !~ /^EXIT/) {
-        # Display available options and prompt for user choice
-        my $action_choice = display_inventory_options($curr_category_ref, $inventory_name);
-        # Perform the chosen action and receive the result
-        $action_result = perform_inventory_action($action_choice, $curr_category_ref);
-        # Update the current category reference if the action has involved any inventory modification, otherwise save it
-        if (ref $action_result eq "HASH") {
-            $curr_category_ref = $action_result;
-        } else {
-            store $inventory_ref, encode("CP-1252", "$FindBin::Bin/inventories/$inventory_name") if $action_result =~ /-SV$/;
-        }
+    while ($chosen_inventory_action !~ /^quit/) {
+        display_inventory_content($curr_category_ref, $inventory_name);
+        my $valid_inventory_options_ref = display_inventory_menu($curr_category_ref);
+        $chosen_inventory_action = get_inventory_choice($valid_inventory_options_ref);
+        $curr_category_ref = perform_inventory_action($chosen_inventory_action, $curr_category_ref);
+    }
+    
+    # Save the updated inventory if the user chose to quit and save
+    if ($chosen_inventory_action eq "quit_save") {
+        store $inventory_ref, encode("CP-1252", "$FindBin::Bin/inventories/$inventory_name");
     }
 }
 
@@ -89,11 +89,24 @@ sub manage_inventory {
     my (@subcategories_refs_depth, @moving_subcategories_refs_depth);
     my (@subcategories_names_depth, @moving_subcategories_names_depth);
 
-    # Display possible actions to perform in the current category, conditionally to its state, and prompt the user to choose one
-    # PARAMS : current category reference and inventory name (string)
-    # RETURNS : available action chosen by the user (string)
-    sub display_inventory_options {
+    # Display information about the current inventory/subcategory state
+    # PARAMS : current category reference (hashref) and inventory name (string)
+    sub display_inventory_content {
         my ($curr_category_ref, $inventory_name) = @_;
+
+        print "-" x 100;
+        print "\nInventaire {". colored($inventory_name, "magenta") . "} ";
+        print scalar @subcategories_names_depth != 0 ?
+                "| Catégorie [" . colored(join("/", @subcategories_names_depth), "green") . "] : \n\n" :
+                ":\n\n";
+        print category_to_string($curr_category_ref);
+    }
+
+    # Display possible actions to perform in the current category, conditionally to its state
+    # PARAMS : current category reference (hashref)
+    # RETURNS : a reference to a hash containing the available actions (keys) and their corresponding strings (values)
+    sub display_inventory_menu {
+        my ($curr_category_ref) = @_;
 
         # Get the actual current subcategories and items (by dereferencing the date structures)
         my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref)};
@@ -102,15 +115,6 @@ sub manage_inventory {
         my $option_nb = 0;
         my %valid_options;
 
-        # Display information about the current inventory/category state
-        print "-" x 100;
-        print "\nInventaire {". colored($inventory_name, "magenta") . "} ";
-        print scalar @subcategories_names_depth != 0 ?
-                "| Catégorie [" . colored(join("/", @subcategories_names_depth), "green") . "] : \n\n" :
-                ":\n\n";
-        print category_to_string($curr_category_ref);
-
-        # Display available actions, depending on the current category state
         print "\nActions :\n";
         if (scalar @curr_subcategories != 0) {
             print ++$option_nb . ". Aller dans une catégorie\n";
@@ -147,18 +151,26 @@ sub manage_inventory {
         print ++$option_nb . ". Quitter sans enregistrer\n\n";
         $valid_options{$option_nb} = "quit_nosave";
 
-        # Prompt for user choice
+        return \%valid_options;
+    }
+
+    # Ask user input for action
+    # PARAMS : a reference to a hash containing the available actions (keys) and their corresponding strings (values)
+    # RETURNS : the chosen action (string)
+    sub get_inventory_choice {
+        my ($valid_options_ref) = @_;
+        my %valid_options = %$valid_options_ref;
+
         my $valid_options_disjunction = join "|", keys %valid_options;
         my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
                                            qr/^($valid_options_disjunction)$/,
                                            "> Veuillez entrer un numéro d'action valide : ");
-        # Return the chosen action
         return $valid_options{$option_choice_nb};
     }
 
     # Perform on the current inventory category the action chosen by the user, prompting him for additional information if needed
-    # PARAMS : action to perform (string) and current category reference
-    # RETURNS : current category reference (maybe changed) or exit message (string)
+    # PARAMS : action to perform (string) and current category reference (hashref)
+    # RETURNS : the potentially updated current category reference (hashref)
     sub perform_inventory_action {
         my ($action, $curr_category_ref) = @_;
 
@@ -289,14 +301,8 @@ sub manage_inventory {
                                              qr/^($curr_items_disjunction)$/,
                                              "> Veuillez entrer un nom d'item valide : ");
             remove_item($curr_category_ref, $item_to_remove);
-        } elsif ($action eq "quit_save") {
-            # Quit and save the inventory
+        } elsif ($action eq "quit_save" or $action eq "quit_nosave") {
             @subcategories_names_depth = ();
-            return "EXIT-SV";
-        } elsif ($action eq "quit_nosave") {
-            # Quit without saving the inventory
-            @subcategories_names_depth = ();
-            return "EXIT";
         }
         return $curr_category_ref;
     }

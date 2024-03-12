@@ -26,18 +26,19 @@ if ($^O eq "MSWin32") {
 
 # Main user interface loop for handling general actions
 sub main_loop_menu {
-    my $chosen_action = "";
-    while ($chosen_action ne "EXIT") {        
+    my $chosen_main_action = "";
+    while ($chosen_main_action ne "EXIT") {        
         my @available_inventories = get_inventories();
 
         display_inventories(@available_inventories);
-        my $valid_menu_options_ref = display_main_menu(@available_inventories);
-        $chosen_action = get_user_choice($valid_menu_options_ref);
-        perform_main_action($chosen_action, @available_inventories);
+        my $valid_main_options_ref = display_main_menu(@available_inventories);
+        $chosen_main_action = get_main_choice($valid_main_options_ref);
+        perform_main_action($chosen_main_action, @available_inventories);
     }
 }
 
 # Display available inventories
+# PARAMS : list of all inventories currently available in the "inventories" folder (strings)
 sub display_inventories {
     my (@inventories) = @_;
 
@@ -51,6 +52,8 @@ sub display_inventories {
 }
 
 # Display main menu options
+# PARAMS : list of all inventories currently available in the "inventories" folder (strings)
+# RETURNS : a reference to a hash containing the valid options for the main menu
 sub display_main_menu {
     my (@inventories) = @_;
 
@@ -78,7 +81,9 @@ sub display_main_menu {
 }
 
 # Ask user input for action
-sub get_user_choice {
+# PARAMS : a reference to a hash containing the valid options for the main menu
+# RETURNS : the chosen action based on user input (string)
+sub get_main_choice {
     my ($valid_options_ref) = @_;
     my %valid_options = %$valid_options_ref;
 
@@ -90,22 +95,24 @@ sub get_user_choice {
 }
 
 # Perform main menu action based on user choice
+# PARAMS : the chosen action based on user input (string),
+#          list of all inventories currently available in the "inventories" folder (strings)
 sub perform_main_action {
-    my ($chosen_action, @inventories) = @_;    
+    my ($chosen_main_action, @inventories) = @_;    
     my $inventories_disjunction = join "|", @inventories;
 
-    if ($chosen_action eq "add_inv") {
+    if ($chosen_main_action eq "add_inv") {
         # Add a new inventory
         my ($new_inventory_ref, $new_inventory_name) = add_inventory();
         manage_inventory($new_inventory_ref, $new_inventory_name);
-    } elsif ($chosen_action eq "open_inv") {
+    } elsif ($chosen_main_action eq "open_inv") {
         # Open an existing inventory
         my $inventory_to_open_name = input_check("\n> Entrez le nom de l'inventaire à ouvrir : ",
                                                     qr/^($inventories_disjunction)$/,
                                                     "> Veuillez saisir un nom d'inventaire valide : ");
         my $inventory_to_open_ref = retrieve encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_open_name");
         manage_inventory($inventory_to_open_ref, $inventory_to_open_name);
-    } elsif ($chosen_action eq "ren_inv") {
+    } elsif ($chosen_main_action eq "ren_inv") {
         # Rename an existing inventory
         my $inventory_to_rename = input_check("\n> Entrez le nom de l'inventaire à renommer : ",
                                                 qr/^($inventories_disjunction)$/,
@@ -122,7 +129,7 @@ sub perform_main_action {
         }
 
         move encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_rename"), encode("CP-1252", "$FindBin::Bin/inventories/$inventory_new_name");
-    } elsif ($chosen_action eq "rm_inv") {
+    } elsif ($chosen_main_action eq "rm_inv") {
         # Remove an existing inventory
         my $inventory_to_remove = input_check("\n> Entrez le nom de l'inventaire à supprimer : ",
                                                 qr/^($inventories_disjunction)$/,
@@ -137,7 +144,7 @@ sub perform_main_action {
             "> Choix non valide. Êtes-vous sûr de vouloir supprimer {<MAGENTA_BEGIN>$inventory_to_remove<MAGENTA_END>} (o/n) ? ");
 
         unlink encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_remove") if ($rm_confirm =~ /^[oO]$/);            
-    } elsif ($chosen_action eq "viz_inv") {
+    } elsif ($chosen_main_action eq "viz_inv") {
         # Save a graph representation of a whole inventory as an external PNG image
         my $inventory_to_visualize_name = input_check("\n> Entrez le nom de l'inventaire à visualiser : ",
                                                         qr/^($inventories_disjunction)$/,
