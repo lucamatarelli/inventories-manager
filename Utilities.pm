@@ -7,6 +7,7 @@ our @EXPORT = qw(
     get_inventories
     input_check
     colorize
+    get_user_choice
 );
 
 use strict;
@@ -69,6 +70,20 @@ sub colorize {
         }
     }
     return $colorized_string;
+}
+
+# Ask user input for action
+# PARAMS : a reference to a hash containing the available actions (keys) and their corresponding strings (values)
+# RETURNS : the chosen action (string)
+sub get_user_choice {
+    my ($valid_options_ref) = @_;
+    my %valid_options = %$valid_options_ref;
+
+    my $valid_options_disjunction = join "|", keys %valid_options;
+    my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
+                                        qr/^($valid_options_disjunction)$/,
+                                        "> Veuillez entrer un numéro d'action valide : ");
+    return $valid_options{$option_choice_nb};
 }
 
 1;

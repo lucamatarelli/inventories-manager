@@ -74,7 +74,7 @@ sub manage_inventory {
     while ($chosen_inventory_action !~ /^quit/) {
         display_inventory_content($curr_category_ref, $inventory_name);
         my $valid_inventory_options_ref = display_inventory_menu($curr_category_ref);
-        $chosen_inventory_action = get_inventory_choice($valid_inventory_options_ref);
+        $chosen_inventory_action = get_user_choice($valid_inventory_options_ref);
         $curr_category_ref = perform_inventory_action($chosen_inventory_action, $curr_category_ref);
     }
     
@@ -86,8 +86,8 @@ sub manage_inventory {
 
 {
     # Variables keeping track of the current path of subcategories the user has dove into
-    my (@subcategories_refs_depth, @moving_subcategories_refs_depth);
-    my (@subcategories_names_depth, @moving_subcategories_names_depth);
+    my (@subcategories_depth_refs, @moving_subcategories_depth_refs);
+    my (@subcategories_depth_names, @moving_subcategories_depth_names);
 
     # Display information about the current inventory/subcategory state
     # PARAMS : current category reference (hashref) and inventory name (string)
@@ -96,8 +96,8 @@ sub manage_inventory {
 
         print "-" x 100;
         print "\nInventaire {". colored($inventory_name, "magenta") . "} ";
-        print scalar @subcategories_names_depth != 0 ?
-                "| Catégorie [" . colored(join("/", @subcategories_names_depth), "green") . "] : \n\n" :
+        print scalar @subcategories_depth_names != 0 ?
+                "| Catégorie [" . colored(join("/", @subcategories_depth_names), "green") . "] : \n\n" :
                 ":\n\n";
         print category_to_string($curr_category_ref);
     }
@@ -120,7 +120,7 @@ sub manage_inventory {
             print ++$option_nb . ". Aller dans une catégorie\n";
             $valid_options{$option_nb} = "go_to";
         }
-        if (scalar @subcategories_refs_depth != 0) {
+        if (scalar @subcategories_depth_refs != 0) {
             print ++$option_nb . ". Remonter d'une catégorie\n";
             $valid_options{$option_nb} = "go_up";
         }
@@ -134,7 +134,7 @@ sub manage_inventory {
             print ++$option_nb . ". Supprimer une catégorie\n";
             $valid_options{$option_nb} = "rm_cat";
         }
-        if (scalar @subcategories_refs_depth != 0) {
+        if (scalar @subcategories_depth_refs != 0) {
             print ++$option_nb . ". Ajouter un item\n";
             $valid_options{$option_nb} = "add_it";
         }
@@ -154,20 +154,6 @@ sub manage_inventory {
         return \%valid_options;
     }
 
-    # Ask user input for action
-    # PARAMS : a reference to a hash containing the available actions (keys) and their corresponding strings (values)
-    # RETURNS : the chosen action (string)
-    sub get_inventory_choice {
-        my ($valid_options_ref) = @_;
-        my %valid_options = %$valid_options_ref;
-
-        my $valid_options_disjunction = join "|", keys %valid_options;
-        my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
-                                           qr/^($valid_options_disjunction)$/,
-                                           "> Veuillez entrer un numéro d'action valide : ");
-        return $valid_options{$option_choice_nb};
-    }
-
     # Perform on the current inventory category the action chosen by the user, prompting him for additional information if needed
     # PARAMS : action to perform (string) and current category reference (hashref)
     # RETURNS : the potentially updated current category reference (hashref)
@@ -182,16 +168,16 @@ sub manage_inventory {
         # Check the chosen action and perform the corresponding operation
         if ($action eq "go_to") {
             # Go into a subcategory
-            push @subcategories_refs_depth, $curr_category_ref;
+            push @subcategories_depth_refs, $curr_category_ref;
             my $new_curr_category = input_check("> Entrez le nom de la catégorie vers laquelle se déplacer : ",
                                                 qr/^($curr_subcategories_disjunction)$/,
                                                 "> Veuillez entrer un nom de catégorie valide : ");
             $curr_category_ref = $curr_category_ref->{$new_curr_category};
-            push @subcategories_names_depth, $new_curr_category;  
+            push @subcategories_depth_names, $new_curr_category;  
         } elsif ($action eq "go_up") {
             # Go up one level in categories
-            $curr_category_ref = pop @subcategories_refs_depth;
-            pop @subcategories_names_depth;
+            $curr_category_ref = pop @subcategories_depth_refs;
+            pop @subcategories_depth_names;
         } elsif ($action eq "add_cat") {
             # Add a new category
             # Ensure that the new category name is valid and not already in use in the current categories
@@ -228,16 +214,16 @@ sub manage_inventory {
                                                qr/^($curr_subcategories_disjunction)$/,
                                                "> Veuillez entrer un nom de catégorie valide : ");
 
-            @moving_subcategories_refs_depth = @subcategories_refs_depth;
-            @moving_subcategories_names_depth = @subcategories_names_depth;
+            @moving_subcategories_depth_refs = @subcategories_depth_refs;
+            @moving_subcategories_depth_names = @subcategories_depth_names;
 
             my $target_category_ref = moving_element($curr_category_ref, $category_to_move, "category", $curr_category_ref);
             if (defined $target_category_ref) {
                 move_category($curr_category_ref, $target_category_ref, $category_to_move);
                 
                 $curr_category_ref = $target_category_ref;
-                @subcategories_refs_depth = @moving_subcategories_refs_depth;
-                @subcategories_names_depth = @moving_subcategories_names_depth;
+                @subcategories_depth_refs = @moving_subcategories_depth_refs;
+                @subcategories_depth_names = @moving_subcategories_depth_names;
             }
         } elsif ($action eq "rm_cat") {
             # Remove a category
@@ -284,16 +270,16 @@ sub manage_inventory {
                                            qr/^($curr_items_disjunction)$/,
                                            "> Veuillez entrer un nom d'item valide : ");
 
-            @moving_subcategories_refs_depth = @subcategories_refs_depth;
-            @moving_subcategories_names_depth = @subcategories_names_depth;
+            @moving_subcategories_depth_refs = @subcategories_depth_refs;
+            @moving_subcategories_depth_names = @subcategories_depth_names;
 
             my $target_category_ref = moving_element($curr_category_ref, $item_to_move, "item");
             if (defined $target_category_ref) {
                 move_item($curr_category_ref, $target_category_ref, $item_to_move);
 
                 $curr_category_ref = $target_category_ref;
-                @subcategories_refs_depth = @moving_subcategories_refs_depth;
-                @subcategories_names_depth = @moving_subcategories_names_depth;
+                @subcategories_depth_refs = @moving_subcategories_depth_refs;
+                @subcategories_depth_names = @moving_subcategories_depth_names;
             }
         } elsif ($action eq "rm_it") {
             # Remove an item
@@ -302,7 +288,7 @@ sub manage_inventory {
                                              "> Veuillez entrer un nom d'item valide : ");
             remove_item($curr_category_ref, $item_to_remove);
         } elsif ($action eq "quit_save" or $action eq "quit_nosave") {
-            @subcategories_names_depth = ();
+            @subcategories_depth_names = ();
         }
         return $curr_category_ref;
     }
@@ -321,8 +307,8 @@ sub manage_inventory {
         } elsif ($element_to_move_type eq "item") {
             print "item \"" . colored($element_to_move, "yellow") . "\"";
         }
-        print scalar @moving_subcategories_names_depth != 0 ?
-                " => catégorie [" . colored(join("/", @moving_subcategories_names_depth), "green") . "]\n\n" :
+        print scalar @moving_subcategories_depth_names != 0 ?
+                " => catégorie [" . colored(join("/", @moving_subcategories_depth_names), "green") . "]\n\n" :
                 " => ...\n\n";
         print category_to_string($curr_moving_category_ref);
 
@@ -335,14 +321,14 @@ sub manage_inventory {
             print ++$option_nb . ". Aller dans une catégorie\n";
             $valid_options{$option_nb} = "go_to";
         }
-        if (scalar @moving_subcategories_refs_depth != 0) {
+        if (scalar @moving_subcategories_depth_refs != 0) {
             print ++$option_nb . ". Remonter d'une catégorie\n";
             $valid_options{$option_nb} = "go_up";
         }
         if ($element_to_move_type eq "category") {
             print ++$option_nb . ". Déplacer ici la catégorie\n";
             $valid_options{$option_nb} = "mv";
-        } elsif ($element_to_move_type eq "item" && scalar @moving_subcategories_refs_depth != 0) {
+        } elsif ($element_to_move_type eq "item" && scalar @moving_subcategories_depth_refs != 0) {
             print ++$option_nb . ". Déplacer ici l'item\n";
             $valid_options{$option_nb} = "mv";
         }
@@ -359,7 +345,7 @@ sub manage_inventory {
         # Perform desired action
         if ($action eq "go_to") {
             # Go into a subcategory
-            push @moving_subcategories_refs_depth, $curr_moving_category_ref;
+            push @moving_subcategories_depth_refs, $curr_moving_category_ref;
             
             my $new_curr_moving_category;
             while (1) {
@@ -371,12 +357,12 @@ sub manage_inventory {
                 print colored("Vous ne pouvez pas entrer dans la catégorie que vous désirez déplacer.\n", "red");
             }
 
-            push @moving_subcategories_names_depth, $new_curr_moving_category;
+            push @moving_subcategories_depth_names, $new_curr_moving_category;
             return moving_element($curr_moving_category_ref->{$new_curr_moving_category}, $element_to_move, $element_to_move_type, $original_curr_category_ref);
         } elsif ($action eq "go_up") {
             # Go up one level in categories
-            pop @moving_subcategories_names_depth;
-            return moving_element(pop @moving_subcategories_refs_depth, $element_to_move, $element_to_move_type, $original_curr_category_ref);
+            pop @moving_subcategories_depth_names;
+            return moving_element(pop @moving_subcategories_depth_refs, $element_to_move, $element_to_move_type, $original_curr_category_ref);
         } elsif ($action eq "mv") {
             # Choose current category to move the element
             if (($element_to_move_type eq "category") && (any {$_ eq $element_to_move} @curr_moving_subcategories)) {

@@ -32,7 +32,7 @@ sub main_loop_menu {
 
         display_inventories(@available_inventories);
         my $valid_main_options_ref = display_main_menu(@available_inventories);
-        $chosen_main_action = get_main_choice($valid_main_options_ref);
+        $chosen_main_action = get_user_choice($valid_main_options_ref);
         perform_main_action($chosen_main_action, @available_inventories);
     }
 }
@@ -78,20 +78,6 @@ sub display_main_menu {
     $valid_options{$option_nb} = "EXIT";
 
     return \%valid_options;
-}
-
-# Ask user input for action
-# PARAMS : a reference to a hash containing the valid options for the main menu
-# RETURNS : the chosen action based on user input (string)
-sub get_main_choice {
-    my ($valid_options_ref) = @_;
-    my %valid_options = %$valid_options_ref;
-
-    my $options_numbers = join "", 1..keys %valid_options;
-    my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
-                                        qr/^[$options_numbers]$/,
-                                        "> Veuillez entrer un numéro d'action valide : ");
-    return $valid_options{$option_choice_nb};
 }
 
 # Perform main menu action based on user choice
