@@ -72,7 +72,7 @@ sub manage_inventory {
 
     # Main loop for managing a given inventory
     while ($chosen_inventory_action !~ /^quit/) {
-        display_inventory_content($curr_category_ref, $inventory_name);
+        display_current_content($curr_category_ref, $inventory_name);
         my $valid_inventory_options_ref = display_inventory_menu($curr_category_ref);
         $chosen_inventory_action = get_user_choice($valid_inventory_options_ref);
         $curr_category_ref = perform_inventory_action($chosen_inventory_action, $curr_category_ref);
@@ -86,12 +86,15 @@ sub manage_inventory {
 
 {
     # Variables keeping track of the current path of subcategories the user has dove into
-    my (@subcategories_depth_refs, @moving_subcategories_depth_refs);
-    my (@subcategories_depth_names, @moving_subcategories_depth_names);
+    my (@subcategories_depth_refs, @subcategories_depth_names);
+    # Variables keeping track of the current path of subcategories the user has dove into during a moving operation
+    my (@moving_subcategories_depth_refs, @moving_subcategories_depth_names);
+    # Variable keeping track of the parent category of the category to move during a moving operation (to prevent from going into it)
+    my $category_to_move_parent_ref;
 
     # Display information about the current inventory/subcategory state
     # PARAMS : current category reference (hashref) and inventory name (string)
-    sub display_inventory_content {
+    sub display_current_content {
         my ($curr_category_ref, $inventory_name) = @_;
 
         print "-" x 100;
@@ -216,8 +219,9 @@ sub manage_inventory {
 
             @moving_subcategories_depth_refs = @subcategories_depth_refs;
             @moving_subcategories_depth_names = @subcategories_depth_names;
+            $category_to_move_parent_ref = $curr_category_ref;
 
-            my $target_category_ref = moving_element($curr_category_ref, $category_to_move, "category", $curr_category_ref);
+            my $target_category_ref = moving_element($curr_category_ref, $category_to_move, "category");
             if (defined $target_category_ref) {
                 move_category($curr_category_ref, $target_category_ref, $category_to_move);
                 
@@ -269,7 +273,7 @@ sub manage_inventory {
             my $item_to_move = input_check("> Entrez le nom de l'item à déplacer : ",
                                            qr/^($curr_items_disjunction)$/,
                                            "> Veuillez entrer un nom d'item valide : ");
-
+            
             @moving_subcategories_depth_refs = @subcategories_depth_refs;
             @moving_subcategories_depth_names = @subcategories_depth_names;
 
@@ -293,13 +297,25 @@ sub manage_inventory {
         return $curr_category_ref;
     }
 
+    # Recursive subroutine to move an element (category or item) to a new location in the inventory
+    # PARAMS : current category reference (hashref), element to move (string), its type (string) and original current category reference (hashref)
+    # RETURNS : the potentially updated current category reference (hashref)
     sub moving_element {
-        my ($curr_moving_category_ref, $element_to_move, $element_to_move_type, $original_curr_category_ref) = @_;
+        my ($curr_moving_category_ref, $element_to_move, $element_to_move_type) = @_;
 
         my @curr_moving_subcategories = @{get_curr_subcategories_ref($curr_moving_category_ref)};
-        my $curr_moving_subcategories_disjunction = join "|", @curr_moving_subcategories;
 
-        # Display information about the current inventory/category state
+        display_moving_current_content($curr_moving_category_ref, $element_to_move, $element_to_move_type);
+        my $valid_moving_options_ref = display_moving_menu($curr_moving_category_ref, $element_to_move, $element_to_move_type, @curr_moving_subcategories);
+        my $chosen_moving_action = get_user_choice($valid_moving_options_ref);
+        return perform_moving_action($chosen_moving_action, $curr_moving_category_ref, $element_to_move, $element_to_move_type, @curr_moving_subcategories);
+    }
+
+    # Display information about the current inventory/subcategory state during a moving operation
+    # PARAMS : current category reference (hashref), element to move (string) and its type (string)
+    sub display_moving_current_content {
+        my ($curr_moving_category_ref, $element_to_move, $element_to_move_type) = @_;
+
         print "~" x 100;
         print "\nDéplacement en cours : ";
         if ($element_to_move_type eq "category") {
@@ -311,15 +327,29 @@ sub manage_inventory {
                 " => catégorie [" . colored(join("/", @moving_subcategories_depth_names), "green") . "]\n\n" :
                 " => ...\n\n";
         print category_to_string($curr_moving_category_ref);
+    }
 
-        # Display available actions, depending on the current category state
+    # Display possible actions to perform in the current category, conditionally to its state during a moving operation
+    # PARAMS : type of element to move (string)
+    # RETURNS : a reference to a hash containing the available actions (keys) and their corresponding strings (values)
+    sub display_moving_menu {
+        my ($curr_moving_category_ref, $element_to_move, $element_to_move_type, @curr_moving_subcategories) = @_;
+
         my $option_nb = 0;
         my %valid_options;
         
         print "\nActions :\n";
         if (scalar @curr_moving_subcategories != 0) {
-            print ++$option_nb . ". Aller dans une catégorie\n";
-            $valid_options{$option_nb} = "go_to";
+            if ($element_to_move_type eq "category" &&
+                !(scalar @curr_moving_subcategories == 1 &&
+                  $curr_moving_category_ref->{$curr_moving_subcategories[0]} == $category_to_move_parent_ref->{$element_to_move})) {
+                # Prevent from going into the category to move if it is the only one in the current category
+                print ++$option_nb . ". Aller dans une catégorie\n";
+                $valid_options{$option_nb} = "go_to";
+            } elsif ($element_to_move_type eq "item") {
+                print ++$option_nb . ". Aller dans une catégorie\n";
+                $valid_options{$option_nb} = "go_to";
+            }
         }
         if (scalar @moving_subcategories_depth_refs != 0) {
             print ++$option_nb . ". Remonter d'une catégorie\n";
@@ -335,34 +365,36 @@ sub manage_inventory {
         print ++$option_nb . ". Annuler le déplacement\n\n";
         $valid_options{$option_nb} = "cancel";
 
-        #  Ask user input for action
-        my $options_numbers = join "", 1..$option_nb;
-        my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
-                                           qr/^[$options_numbers]$/,
-                                           "> Veuillez entrer un numéro d'action valide : ");
-        my $action = $valid_options{$option_choice_nb};
+        return \%valid_options;
+    }
 
-        # Perform desired action
+    # Perform on the current inventory category the action chosen by the user, prompting him for additional information if needed during a moving operation
+    # PARAMS : action to perform (string), current category reference (hashref), element to move (string) and its type (string)
+    # RETURNS : the potentially updated current category reference (hashref)
+    sub perform_moving_action {
+        my ($action, $curr_moving_category_ref, $element_to_move, $element_to_move_type, @curr_moving_subcategories) = @_;
+
         if ($action eq "go_to") {
             # Go into a subcategory
             push @moving_subcategories_depth_refs, $curr_moving_category_ref;
             
+            my $curr_moving_subcategories_disjunction = join "|", @curr_moving_subcategories;            
             my $new_curr_moving_category;
             while (1) {
                 $new_curr_moving_category = input_check("> Entrez le nom de la catégorie vers laquelle se déplacer : ",
                                                            qr/^($curr_moving_subcategories_disjunction)$/,
                                                            "> Veuillez entrer un nom de catégorie valide : ");
                 # Check whether chosen category is the one to move, and if so, prevent from going into it
-                last if $curr_moving_category_ref->{$new_curr_moving_category} != $original_curr_category_ref->{$element_to_move};
+                last if $curr_moving_category_ref->{$new_curr_moving_category} != $category_to_move_parent_ref->{$element_to_move};
                 print colored("Vous ne pouvez pas entrer dans la catégorie que vous désirez déplacer.\n", "red");
             }
 
             push @moving_subcategories_depth_names, $new_curr_moving_category;
-            return moving_element($curr_moving_category_ref->{$new_curr_moving_category}, $element_to_move, $element_to_move_type, $original_curr_category_ref);
+            return moving_element($curr_moving_category_ref->{$new_curr_moving_category}, $element_to_move, $element_to_move_type);
         } elsif ($action eq "go_up") {
             # Go up one level in categories
             pop @moving_subcategories_depth_names;
-            return moving_element(pop @moving_subcategories_depth_refs, $element_to_move, $element_to_move_type, $original_curr_category_ref);
+            return moving_element(pop @moving_subcategories_depth_refs, $element_to_move, $element_to_move_type);
         } elsif ($action eq "mv") {
             # Choose current category to move the element
             if (($element_to_move_type eq "category") && (any {$_ eq $element_to_move} @curr_moving_subcategories)) {
@@ -370,7 +402,7 @@ sub manage_inventory {
                 print colorize("<RED_BEGIN>Une catégorie porte déjà le nom de \"<GREEN_BEGIN>$element_to_move<GREEN_END>\" ici.\n"
                       . "Veuillez choisir une catégorie différente ou annuler le déplacement et renommer votre catégorie.\n<RED_END>");
                 sleep 3;
-                return moving_element($curr_moving_category_ref, $element_to_move, $element_to_move_type, $original_curr_category_ref);
+                return moving_element($curr_moving_category_ref, $element_to_move, $element_to_move_type);
             }
             return $curr_moving_category_ref;
         } elsif ($action eq "cancel") {

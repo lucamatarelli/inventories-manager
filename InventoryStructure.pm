@@ -84,7 +84,7 @@ Luca Matarelli
 
 =cut
 
-# Module containing low-level manipulation routines for inventory data structure
+# Module containing low-level manipulation routines for handling inventory data structure
 package InventoryStructure;
 
 use Exporter;
