@@ -1,4 +1,4 @@
-# inventory_manager.pl
+# inventories.pl
 # This main script provides a simple inventory management system through CLI.
 # Users can create, open, rename, and delete inventories, manage categories,
 # and perform various actions within the inventory system.
@@ -14,7 +14,6 @@ BEGIN {
     $curr_dir = encode("CP-1252", "$FindBin::Bin");
     push @INC, $curr_dir;
 }
-
 use File::Copy;
 use List::Util qw(any);
 use Storable;

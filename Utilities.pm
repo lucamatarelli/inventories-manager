@@ -1,4 +1,5 @@
-# Module containing various utility routines
+# Utilities.pm
+# Module containing various utility routines neeeded for the inventory system.
 package Utilities;
 
 use Exporter;
@@ -17,7 +18,6 @@ use utf8;
 use Encode qw(encode);
 use FindBin;
 my $curr_dir = encode("CP-1252", "$FindBin::Bin");
-
 use Term::ANSIColor;
 use List::Util qw(any);
 

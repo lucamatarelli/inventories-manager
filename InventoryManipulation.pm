@@ -1,4 +1,5 @@
-# Module containing all high-level manipulation routines related to inventory user management
+# InventoryManipulation.pm
+# Module containing all high-level manipulation routines related to inventory user management and visualization.
 package InventoryManipulation;
 
 use Exporter;
@@ -16,7 +17,6 @@ use utf8;
 use Encode qw(encode);
 use FindBin;
 my $curr_dir = encode("CP-1252", "$FindBin::Bin");
-
 use List::Util qw(any);
 use Storable;
 use Term::ANSIColor;
