@@ -14,7 +14,10 @@ use strict;
 use warnings;
 use utf8;
 
+use Encode qw(encode);
 use FindBin;
+my $curr_dir = encode("CP-1252", "$FindBin::Bin");
+
 use Term::ANSIColor;
 use List::Util qw(any);
 
@@ -22,7 +25,7 @@ use List::Util qw(any);
 # RETURNS : list of all inventories currently available in the "inventories" folder (strings)
 sub get_inventories {
     mkdir "inventories" if not any {$_ eq "inventories"} glob "*";
-    my @inventories_paths = glob "$FindBin::Bin/inventories/*";
+    my @inventories_paths = glob qq("$curr_dir/inventories/*");
     my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
     return @inventories;
 

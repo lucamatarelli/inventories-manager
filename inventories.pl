@@ -7,9 +7,14 @@ use strict;
 use warnings;
 use utf8;
 
-use FindBin;
-use lib "$FindBin::Bin";
-use Encode qw(encode);
+my $curr_dir;
+BEGIN {
+    use Encode qw(encode);
+    use FindBin;
+    $curr_dir = encode("CP-1252", "$FindBin::Bin");
+    push @INC, $curr_dir;
+}
+
 use File::Copy;
 use List::Util qw(any);
 use Storable;
@@ -96,7 +101,7 @@ sub perform_main_action {
         my $inventory_to_open_name = input_check("\n> Entrez le nom de l'inventaire à ouvrir : ",
                                                     qr/^($inventories_disjunction)$/,
                                                     "> Veuillez saisir un nom d'inventaire valide : ");
-        my $inventory_to_open_ref = retrieve encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_open_name");
+        my $inventory_to_open_ref = retrieve($curr_dir . encode("CP-1252", "/inventories/$inventory_to_open_name"));
         manage_inventory($inventory_to_open_ref, $inventory_to_open_name);
     } elsif ($chosen_main_action eq "ren_inv") {
         # Rename an existing inventory
@@ -114,7 +119,7 @@ sub perform_main_action {
             print colorize("<RED_BEGIN>Un inventaire porte déjà le nom de \"<MAGENTA_BEGIN>$inventory_new_name<MAGENTA_END>\". Veuillez choisir un nom différent.\n<RED_END>");
         }
 
-        move encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_rename"), encode("CP-1252", "$FindBin::Bin/inventories/$inventory_new_name");
+        move($curr_dir . encode("CP-1252", "/inventories/$inventory_to_rename"), $curr_dir . encode("CP-1252", "/inventories/$inventory_new_name"));
     } elsif ($chosen_main_action eq "rm_inv") {
         # Remove an existing inventory
         my $inventory_to_remove = input_check("\n> Entrez le nom de l'inventaire à supprimer : ",
@@ -129,13 +134,13 @@ sub perform_main_action {
             qr/^[on]$/i,
             "> Choix non valide. Êtes-vous sûr de vouloir supprimer {<MAGENTA_BEGIN>$inventory_to_remove<MAGENTA_END>} (o/n) ? ");
 
-        unlink encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_remove") if ($rm_confirm =~ /^[oO]$/);            
+        unlink($curr_dir . encode("CP-1252", "/inventories/$inventory_to_remove")) if ($rm_confirm =~ /^[oO]$/);            
     } elsif ($chosen_main_action eq "viz_inv") {
         # Save a graph representation of a whole inventory as an external PNG image
         my $inventory_to_visualize_name = input_check("\n> Entrez le nom de l'inventaire à visualiser : ",
                                                         qr/^($inventories_disjunction)$/,
                                                         "> Veuillez saisir un nom d'inventaire valide : ");
-        my $inventory_to_visualize_ref = retrieve encode("CP-1252", "$FindBin::Bin/inventories/$inventory_to_visualize_name");
+        my $inventory_to_visualize_ref = retrieve($curr_dir . encode("CP-1252", "/inventories/$inventory_to_visualize_name"));
         visualize_inventory($inventory_to_visualize_ref, $inventory_to_visualize_name);
         
         print "\nVisualisation de l'inventaire {" . colored($inventory_to_visualize_name, "magenta") . "} générée";

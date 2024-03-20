@@ -13,8 +13,10 @@ use strict;
 use warnings;
 use utf8;
 
-use FindBin;
 use Encode qw(encode);
+use FindBin;
+my $curr_dir = encode("CP-1252", "$FindBin::Bin");
+
 use List::Util qw(any);
 use Storable;
 use Term::ANSIColor;
@@ -80,7 +82,7 @@ sub manage_inventory {
     
     # Save the updated inventory if the user chose to quit and save
     if ($chosen_inventory_action eq "quit_save") {
-        store $inventory_ref, encode("CP-1252", "$FindBin::Bin/inventories/$inventory_name");
+        store $inventory_ref, $curr_dir . encode("CP-1252", "/inventories/$inventory_name");
     }
 }
 
@@ -465,7 +467,7 @@ sub visualize_inventory {
 
     # Save the graph as external PNG file
     mkdir "img" if not any {$_ eq "img"} glob "*";
-    $inventory_graph->run(format => "png", output_file => encode("CP-1252", "$FindBin::Bin/img/$inventory_name.png"));
+    $inventory_graph->run(format => "png", output_file => $curr_dir . encode("CP-1252", "/img/$inventory_name.png"));
 
     # Reapply encoding layer on standard output because "run" method modifies it
     if ($^O eq "MSWin32") {
