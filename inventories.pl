@@ -98,9 +98,10 @@ sub perform_main_action {
     } elsif ($chosen_main_action eq "open_inv") {
         # Open an existing inventory
         my $inventory_to_open_name = input_check("\n> Entrez le nom de l'inventaire à ouvrir : ",
-                                                    qr/^($inventories_disjunction)$/,
-                                                    "> Veuillez saisir un nom d'inventaire valide : ");
-        my $inventory_to_open_ref = retrieve($curr_dir . encode("CP-1252", "/inventories/$inventory_to_open_name"));
+                                                 qr/^($inventories_disjunction)$/,
+                                                 "> Veuillez saisir un nom d'inventaire valide : ");
+        my $inventory_to_open_ref = retrieve($curr_dir . encode("CP-1252", "/inventories/$inventory_to_open_name"))
+                                        or die "Impossible de récupérer l'inventaire $inventory_to_open_name : $!\n";
         manage_inventory($inventory_to_open_ref, $inventory_to_open_name);
     } elsif ($chosen_main_action eq "ren_inv") {
         # Rename an existing inventory
@@ -112,13 +113,14 @@ sub perform_main_action {
         my $inventory_new_name = "";
         while (1) {
             $inventory_new_name = input_check("> Indiquez le nouveau nom de {<MAGENTA_BEGIN>$inventory_to_rename<MAGENTA_END>} : ",
-                                                qr/^[\p{L}\d_-]+$/,
-                                                "> Format non valide. Indiquez le nouveau nom de {<MAGENTA_BEGIN>$inventory_to_rename<MAGENTA_END>} : ");
+                                              qr/^[\p{L}\d_-]+$/,
+                                              "Format non valide (caractères acceptés : lettres, chiffres, - et _)\n> Indiquez le nouveau nom de {<MAGENTA_BEGIN>$inventory_to_rename<MAGENTA_END>} : ");
             last if (not any {$_ eq $inventory_new_name} @inventories);
             print colorize("<RED_BEGIN>Un inventaire porte déjà le nom de \"<MAGENTA_BEGIN>$inventory_new_name<MAGENTA_END>\". Veuillez choisir un nom différent.\n<RED_END>");
         }
 
-        move($curr_dir . encode("CP-1252", "/inventories/$inventory_to_rename"), $curr_dir . encode("CP-1252", "/inventories/$inventory_new_name"));
+        move($curr_dir . encode("CP-1252", "/inventories/$inventory_to_rename"), $curr_dir . encode("CP-1252", "/inventories/$inventory_new_name"))
+            or die "Impossible de renommer l'inventaire $inventory_to_rename : $!\n";
     } elsif ($chosen_main_action eq "rm_inv") {
         # Remove an existing inventory
         my $inventory_to_remove = input_check("\n> Entrez le nom de l'inventaire à supprimer : ",
@@ -131,15 +133,19 @@ sub perform_main_action {
                 . "<MAGENTA_END>} et son contenu.\n"
                 . "> Êtes-vous sûr de vouloir continuer (o/n) ? ",
             qr/^[on]$/i,
-            "> Choix non valide. Êtes-vous sûr de vouloir supprimer {<MAGENTA_BEGIN>$inventory_to_remove<MAGENTA_END>} (o/n) ? ");
+            "Choix non valide.\n> Êtes-vous sûr de vouloir supprimer {<MAGENTA_BEGIN>$inventory_to_remove<MAGENTA_END>} (o/n) ? ");
 
-        unlink($curr_dir . encode("CP-1252", "/inventories/$inventory_to_remove")) if ($rm_confirm =~ /^[oO]$/);            
+        if ($rm_confirm =~ /^[oO]$/) {
+            unlink($curr_dir . encode("CP-1252", "/inventories/$inventory_to_remove"))
+                or die "Impossible de supprimer l'inventaire $inventory_to_remove : $!\n";
+        }           
     } elsif ($chosen_main_action eq "viz_inv") {
         # Save a graph representation of a whole inventory as an external PNG image
         my $inventory_to_visualize_name = input_check("\n> Entrez le nom de l'inventaire à visualiser : ",
                                                         qr/^($inventories_disjunction)$/,
                                                         "> Veuillez saisir un nom d'inventaire valide : ");
-        my $inventory_to_visualize_ref = retrieve($curr_dir . encode("CP-1252", "/inventories/$inventory_to_visualize_name"));
+        my $inventory_to_visualize_ref = retrieve($curr_dir . encode("CP-1252", "/inventories/$inventory_to_visualize_name"))
+                                            or die "Impossible de récupérer l'inventaire $inventory_to_visualize_name : $!\n";
         visualize_inventory($inventory_to_visualize_ref, $inventory_to_visualize_name);
         
         print "\nVisualisation de l'inventaire {" . colored($inventory_to_visualize_name, "magenta") . "} générée";

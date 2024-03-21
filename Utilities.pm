@@ -24,7 +24,10 @@ use List::Util qw(any);
 # Utility routine: gather the names of all previously created inventories
 # RETURNS : list of all inventories currently available in the "inventories" folder (strings)
 sub get_inventories {
-    mkdir "inventories" if not any {$_ eq "inventories"} glob "*";
+    if (not any {$_ eq "inventories"} glob "*") {
+        mkdir "inventories"
+            or die "Impossible de créer le répertoire 'inventories' : $!\n";
+    }
     my @inventories_paths = glob qq("$curr_dir/inventories/*");
     my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
     return @inventories;
@@ -82,10 +85,11 @@ sub get_user_choice {
     my ($valid_options_ref) = @_;
     my %valid_options = %$valid_options_ref;
 
+    my $options_number = scalar keys %valid_options;
     my $valid_options_disjunction = join "|", keys %valid_options;
     my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
                                         qr/^($valid_options_disjunction)$/,
-                                        "> Veuillez entrer un numéro d'action valide : ");
+                                        "> Veuillez entrer un numéro d'action valide (1-$options_number) : ");
     return $valid_options{$option_choice_nb};
 }
 

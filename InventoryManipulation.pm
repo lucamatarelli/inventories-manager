@@ -35,7 +35,7 @@ sub add_inventory {
     while (1) {
         $new_inventory_name = input_check("\n> Nommez votre nouvel inventaire : ",
                                           qr/^[\p{L}\d_-]+$/,
-                                          "> Format non valide. Nommez votre nouvel inventaire : ");
+                                          "Format non valide (caractères acceptés : lettres, chiffres, - et _)\n> Nommez votre nouvel inventaire : ");
         last if (not any {$_ eq $new_inventory_name} @inventories);
         print colorize("<RED_BEGIN>Un inventaire porte déjà le nom de \"<MAGENTA_BEGIN>$new_inventory_name<MAGENTA_END>\". Veuillez choisir un nom différent.\n<RED_END>");
     }
@@ -49,12 +49,12 @@ sub add_inventory {
     # Loop to gather macro-category names
     my $macrocategory_name = input_check("> Catégorie 1 : ",
                                          qr/^[^\s\/](.*[^\s])*$/,
-                                         "Vous devez entrer au moins une catégorie valide !\n> Catégorie 1 : ");
+                                         "Vous devez entrer au moins une catégorie valide (aucun espace blanc au début ou à la fin)\n> Catégorie 1 : ");
     while ($macrocategory_name ne "/") {
         push @macrocategories, $macrocategory_name;
         $macrocategory_name = input_check("> Catégorie " . ++$macrocategory_number . " : ",
                                           qr/^[^\s](.*[^\s])*$/,
-                                          "> Format non valide. Catégorie " . $macrocategory_number . " : ");
+                                          "Format non valide (aucun espace blanc au début ou à la fin)\n> Catégorie " . $macrocategory_number . " : ");
     }
     
     # Create a new inventory and return it
@@ -82,7 +82,8 @@ sub manage_inventory {
     
     # Save the updated inventory if the user chose to quit and save
     if ($chosen_inventory_action eq "quit_save") {
-        store $inventory_ref, $curr_dir . encode("CP-1252", "/inventories/$inventory_name");
+        store $inventory_ref, $curr_dir . encode("CP-1252", "/inventories/$inventory_name")
+            or die "Impossible de sauvegarder l'inventaire : $!\n";
     }
 }
 
@@ -190,7 +191,7 @@ sub manage_inventory {
             while (1) {
                 $new_category_name = input_check("> Entrez le nom de votre nouvelle catégorie : ",
                                                  qr/^[^\s](.*[^\s])*$/,
-                                                 "> Format non valide. Entrez le nom de votre nouvelle catégorie : ");
+                                                 "Format non valide (aucun espace blanc au début ou à la fin)\n> Entrez le nom de votre nouvelle catégorie : ");
                 last if (not any {$_ eq $new_category_name} @curr_subcategories);
                 print colorize("<RED_BEGIN>Une catégorie porte déjà le nom de \"<GREEN_BEGIN>$new_category_name<GREEN_END>\". Veuillez choisir un nom différent.\n<RED_END>");
             }
@@ -207,7 +208,7 @@ sub manage_inventory {
             while (1) {
                 $category_new_name = input_check("> Entrez le nouveau nom de [<GREEN_BEGIN>$category_to_rename<GREEN_END>] : ",
                                                  qr/^[^\s](.*[^\s])*$/,
-                                                 "> Format non valide. Entrez le nouveau nom de [<GREEN_BEGIN>$category_to_rename<GREEN_END>] : ");
+                                                 "Format non valide (aucun espace blanc au début ou à la fin)\n> Entrez le nouveau nom de [<GREEN_BEGIN>$category_to_rename<GREEN_END>] : ");
                 last if (not any {$_ eq $category_new_name} @curr_subcategories);
                 print colorize("<RED_BEGIN>Une catégorie porte déjà le nom de \"<GREEN_BEGIN>$category_new_name<GREEN_END>\". Veuillez choisir un nom différent.\n<RED_END>");
             }
@@ -251,7 +252,7 @@ sub manage_inventory {
                         . $category_to_remove
                         . "<GREEN_END>] contient des éléments. Êtes-vous certain de vouloir supprimer tout son contenu (o/n) ? ",
                     qr/^[on]$/i,
-                    "> Choix non valide. Êtes-vous sûr de vouloir supprimer [<GREEN_BEGIN>$category_to_remove<GREEN_END>] (o/n) ? ");
+                    "Choix non valide.\n> Êtes-vous sûr de vouloir supprimer [<GREEN_BEGIN>$category_to_remove<GREEN_END>] (o/n) ? ");
                 # Remove the category if the user confirms
                 remove_category($curr_category_ref, $category_to_remove) if ($rm_confirm =~ /^[oO]$/);
             }
@@ -259,7 +260,7 @@ sub manage_inventory {
             # Add a new item
             my $new_item = input_check("> Entrez le nom du nouvel item : ",
                                        qr/^[^\s](.*[^\s])*$/,
-                                       "> Format non valide. Entrez le nom du nouvel item : ");
+                                       "Format non valide (aucun espace blanc au début ou à la fin)\n> Entrez le nom du nouvel item : ");
             add_item($curr_category_ref, $new_item);
         } elsif ($action eq "ren_it") {
             # Rename an item
@@ -268,7 +269,7 @@ sub manage_inventory {
                                              "> Veuillez entrer un nom d'item valide : ");
             my $item_new_name = input_check("> Entrez le nouveau nom de \"<YELLOW_BEGIN>$item_to_rename<YELLOW_END>\" : ",
                                             qr/^[^\s](.*[^\s])*$/,
-                                            "> Format non valide. Entrez le nouveau nom de \"<YELLOW_BEGIN>$item_to_rename<YELLOW_END>\" : ");
+                                            "Format non valide (aucun espace blanc au début ou à la fin)\n> Entrez le nouveau nom de \"<YELLOW_BEGIN>$item_to_rename<YELLOW_END>\" : ");
             rename_item($curr_category_ref, $item_to_rename, $item_new_name);
         } elsif ($action eq "mv_it") {
             # Move an item
@@ -384,8 +385,8 @@ sub manage_inventory {
             my $new_curr_moving_category;
             while (1) {
                 $new_curr_moving_category = input_check("> Entrez le nom de la catégorie vers laquelle se déplacer : ",
-                                                           qr/^($curr_moving_subcategories_disjunction)$/,
-                                                           "> Veuillez entrer un nom de catégorie valide : ");
+                                                        qr/^($curr_moving_subcategories_disjunction)$/,
+                                                        "> Veuillez entrer un nom de catégorie valide : ");
                 # Check whether chosen category is the one to move, and if so, prevent from going into it
                 last if $curr_moving_category_ref->{$new_curr_moving_category} != $category_to_move_parent_ref->{$element_to_move};
                 print colored("Vous ne pouvez pas entrer dans la catégorie que vous désirez déplacer.\n", "red");
@@ -466,8 +467,12 @@ sub visualize_inventory {
     add_nodes_and_edges($inventory_graph, "root", $inventory_ref);
 
     # Save the graph as external PNG file
-    mkdir "img" if not any {$_ eq "img"} glob "*";
-    $inventory_graph->run(format => "png", output_file => $curr_dir . encode("CP-1252", "/img/$inventory_name.png"));
+    if (not any {$_ eq "img"} glob "*") {
+        mkdir "img"
+            or die "Impossible de créer le répertoire 'img' : $!\n";
+    }
+    $inventory_graph->run(format => "png", output_file => $curr_dir . encode("CP-1252", "/img/$inventory_name.png"))
+        or die "Impossible de générer le fichier PNG de l'inventaire : $!\n";
 
     # Reapply encoding layer on standard output because "run" method modifies it
     if ($^O eq "MSWin32") {
