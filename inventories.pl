@@ -13,6 +13,9 @@ BEGIN {
     use FindBin;
     $curr_dir = encode("CP-1252", "$FindBin::Bin");
     push @INC, $curr_dir;
+
+    my $install_dependencies_status = system "perl install_dependencies.pl";
+    exit 1 if $install_dependencies_status != 0;
 }
 use File::Copy;
 use List::Util qw(any);
