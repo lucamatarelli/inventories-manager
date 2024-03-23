@@ -25,10 +25,13 @@ use Term::ANSIColor;
 use InventoryManipulation;
 use Utilities;
 
-# Encoding layer for proper CLI interactions
+# Encoding layer for properly displayed CLI interactions
 if ($^O eq "MSWin32") {
     binmode STDOUT, ":encoding(CP-850)";
     binmode STDIN, ":encoding(CP-850)";
+} else {
+    binmode STDOUT, ":encoding(UTF-8)";
+    binmode STDIN, ":encoding(UTF-8)";
 }
 
 # Main user interface loop for handling general actions

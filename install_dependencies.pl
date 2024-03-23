@@ -5,6 +5,15 @@ use strict;
 use warnings;
 use utf8;
 
+# Encoding layer for properly displayed CLI interactions
+if ($^O eq "MSWin32") {
+    binmode STDOUT, ":encoding(CP-850)";
+    binmode STDIN, ":encoding(CP-850)";
+} else {
+    binmode STDOUT, ":encoding(UTF-8)";
+    binmode STDIN, ":encoding(UTF-8)";
+}
+
 my @necessary_modules = qw(GraphViz2);
 
 my @missing_modules = get_missing_modules();
@@ -26,17 +35,17 @@ sub install_dependencies {
     my @missing_modules = @_;
 
     my $dependencies = join " ", @missing_modules;
-    print "The following modules are not installed: $dependencies\n";
-    print "Do you want to install them? (y/n) ";
+    print "Les modules suivants ne sont pas installés : $dependencies\n";
+    print "Voulez-vous les installer ? (o/n) ";
 
     my $user_choice = <STDIN>;
     chomp $user_choice;
-    if ($user_choice eq "y") {
+    if ($user_choice eq "o") {
         system("cpanm $dependencies");
         exit 0;
     } else {
-        print "The following modules are required to run the script: $dependencies\n";
-        print "Please install them and run the script again.\n";
+        print "Les modules suivants sont requis pour exécuter le script : $dependencies\n";
+        print "Veillez à les installer avant de relancer le script.\n";
         exit 1;
     }
 }
