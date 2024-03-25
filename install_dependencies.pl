@@ -36,13 +36,24 @@ sub install_dependencies {
 
     my $dependencies = join " ", @missing_modules;
     print "Les modules suivants ne sont pas installés : $dependencies\n";
-    print "Voulez-vous les installer ? (o/n) ";
+    print "\nNB : le module GraphViz2 nécessite l'installation préalable du logiciel de visualisation graphique GraphViz (ainsi que son ajout au PATH) : https://www.graphviz.org/download/.\n\n";
+    print "Voulez-vous installer les modules manquants ? (o/n) ";
 
     my $user_choice = <STDIN>;
     chomp $user_choice;
+    print "\n";
+
     if ($user_choice eq "o") {
-        system("cpanm $dependencies");
-        exit 0;
+        my $installation_status = system("cpanm $dependencies");
+        print "\n";
+        if ($installation_status == 0) {
+            print "Installation des modules réussie.\n";
+            sleep 1;
+            exit 0;
+        } else {
+            print "Erreur lors de l'installation des modules.\n";
+            exit 1;
+        }
     } else {
         print "Les modules suivants sont requis pour exécuter le script : $dependencies\n";
         print "Veillez à les installer avant de relancer le script.\n";
