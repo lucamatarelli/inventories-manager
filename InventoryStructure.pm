@@ -17,7 +17,7 @@ use warnings;
 use utf8;
 
 use List::Util qw(first);
-use Term::ANSIColor;
+use Term::ANSIColor qw(colored);
 use Unicode::Collate;
 
 # Create a new inventory with the specified macro-categories

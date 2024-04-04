@@ -15,15 +15,18 @@ use warnings;
 use utf8;
 
 use Encode qw(encode);
-use FindBin;
-my $curr_dir = encode("CP-1252", "$FindBin::Bin");
+use FindBin qw($Bin);
+my $curr_dir = encode("CP-1252", $FindBin::Bin);
 use List::Util qw(any);
-use Storable;
-use Term::ANSIColor;
+use Storable qw(store);
+use Term::ANSIColor qw(colored);
 use GraphViz2;
 
 use InventoryStructure;
 use Utilities;
+
+my $lh = $main::lh;
+sub say_localized { &main::say_localized(@_); }
 
 # Create a new inventory
 # RETURNS : a reference to the newly created inventory hash and its name (string)
@@ -33,33 +36,26 @@ sub add_inventory {
     # Ensure that the new inventory name is valid and not already in use in the current inventories
     my $new_inventory_name = "";
     while (1) {
-        $new_inventory_name = input_check("\n> Nommez votre nouvel inventaire : ",
-                                          qr/^[\p{L}\d_-]+$/,
-                                          "Format non valide (caractères acceptés : lettres, chiffres, - et _)\n> Nommez votre nouvel inventaire : ");
+        $new_inventory_name = input_check("input_new_inventory_name", qr/^[\p{L}\d_-]+$/, "new_inventory_name_fail");
         last if (not any {$_ eq $new_inventory_name} @inventories);
-        print colorize("<RED_BEGIN>Un inventaire porte déjà le nom de \"<MAGENTA_BEGIN>$new_inventory_name<MAGENTA_END>\". Veuillez choisir un nom différent.\n<RED_END>");
+        print colorize($lh->maketext("inventory_name_taken", $new_inventory_name));
     }
 
-    print "\nEntrez les noms des macro-catégories que contiendra votre inventaire.\n";
-    print "(Pour terminer le processus, entrez simplement / en guise de dernière catégorie)\n";
+    say_localized("macrocategories_instruction");
 
     my $macrocategory_number = 1;
     my @macrocategories;
     
     # Loop to gather macro-category names
-    my $macrocategory_name = input_check("> Catégorie 1 : ",
-                                         qr/^[^\s\/](.*[^\s])*$/,
-                                         "Vous devez entrer au moins une catégorie valide (aucun espace blanc au début ou à la fin)\n> Catégorie 1 : ");
+    my $macrocategory_name = input_check("input_macrocategory", qr/^[^\s\/](.*[^\s])*$/, "first_macrocategory_fail", $macrocategory_number);
     while ($macrocategory_name ne "/") {
         push @macrocategories, $macrocategory_name;
-        $macrocategory_name = input_check("> Catégorie " . ++$macrocategory_number . " : ",
-                                          qr/^[^\s](.*[^\s])*$/,
-                                          "Format non valide (aucun espace blanc au début ou à la fin)\n> Catégorie " . $macrocategory_number . " : ");
+        $macrocategory_name = input_check("input_macrocategory", qr/^[^\s](.*[^\s])*$/, "macrocategory_fail", ++$macrocategory_number);
     }
     
     # Create a new inventory and return it
     my %new_inventory = new_inventory(@macrocategories);
-    print "\nNouvel inventaire créé !\n\n";
+    say_localized("new_inventory_success", colored($new_inventory_name, "magenta"));
     sleep 2;
     return (\%new_inventory, $new_inventory_name);
 }
@@ -83,7 +79,7 @@ sub manage_inventory {
     # Save the updated inventory if the user chose to quit and save
     if ($chosen_inventory_action eq "quit_save") {
         store $inventory_ref, $curr_dir . encode("CP-1252", "/inventories/$inventory_name")
-            or die "Impossible de sauvegarder l'inventaire : $!\n";
+            or die $lh->maketext("inventory_set_error", $inventory_name, $!);
     }
 }
 
@@ -101,10 +97,9 @@ sub manage_inventory {
         my ($curr_category_ref, $inventory_name) = @_;
 
         print "-" x 100;
-        print "\nInventaire {". colored($inventory_name, "magenta") . "} ";
-        print scalar @subcategories_depth_names != 0 ?
-                "| Catégorie [" . colored(join("/", @subcategories_depth_names), "green") . "] : \n\n" :
-                ":\n\n";
+        say_localized("current_inventory", colored($inventory_name, "magenta"));
+        say_localized("current_subcategories", colored(join("/", @subcategories_depth_names), "green")) if scalar @subcategories_depth_names != 0;
+        print "\n";
         print category_to_string($curr_category_ref);
     }
 
@@ -121,40 +116,40 @@ sub manage_inventory {
         my $option_nb = 0;
         my %valid_options;
 
-        print "\nActions :\n";
+        say_localized("wish");
         if (scalar @curr_subcategories != 0) {
-            print ++$option_nb . ". Aller dans une catégorie\n";
+            say_localized("go_into_category", ++$option_nb);
             $valid_options{$option_nb} = "go_to";
         }
         if (scalar @subcategories_depth_refs != 0) {
-            print ++$option_nb . ". Remonter d'une catégorie\n";
+            say_localized("go_into_parent_category", ++$option_nb);
             $valid_options{$option_nb} = "go_up";
         }
-        print ++$option_nb . ". Ajouter une catégorie\n";
+        say_localized("add_category", ++$option_nb);
         $valid_options{$option_nb} = "add_cat";
         if (scalar @curr_subcategories != 0) {
-            print ++$option_nb . ". Renommer une catégorie\n";
+            say_localized("rename_category", ++$option_nb);
             $valid_options{$option_nb} = "ren_cat";
-            print ++$option_nb . ". Déplacer une catégorie\n";
+            say_localized("move_category", ++$option_nb);
             $valid_options{$option_nb} = "mv_cat";
-            print ++$option_nb . ". Supprimer une catégorie\n";
+            say_localized("remove_category", ++$option_nb);
             $valid_options{$option_nb} = "rm_cat";
         }
         if (scalar @subcategories_depth_refs != 0) {
-            print ++$option_nb . ". Ajouter un item\n";
+            say_localized("add_item", ++$option_nb);
             $valid_options{$option_nb} = "add_it";
         }
         if (scalar @curr_items != 0) {
-            print ++$option_nb . ". Renommer un item\n";
+            say_localized("rename_item", ++$option_nb);
             $valid_options{$option_nb} = "ren_it";
-            print ++$option_nb . ". Déplacer un item\n";
+            say_localized("move_item", ++$option_nb);
             $valid_options{$option_nb} = "mv_it";
-            print ++$option_nb . ". Supprimer un item\n";
+            say_localized("remove_item", ++$option_nb);
             $valid_options{$option_nb} = "rm_it";
         }
-        print ++$option_nb . ". Enregistrer l'inventaire et quitter\n";
+        say_localized("inventory_save_and_exit", ++$option_nb);
         $valid_options{$option_nb} = "quit_save";
-        print ++$option_nb . ". Quitter sans enregistrer\n\n";
+        say_localized("inventory_exit", ++$option_nb);
         $valid_options{$option_nb} = "quit_nosave";
 
         return \%valid_options;
@@ -175,9 +170,7 @@ sub manage_inventory {
         if ($action eq "go_to") {
             # Go into a subcategory
             push @subcategories_depth_refs, $curr_category_ref;
-            my $new_curr_category = input_check("> Entrez le nom de la catégorie vers laquelle se déplacer : ",
-                                                qr/^($curr_subcategories_disjunction)$/,
-                                                "> Veuillez entrer un nom de catégorie valide : ");
+            my $new_curr_category = input_check("input_category_to_go_into", qr/^($curr_subcategories_disjunction)$/, "category_fail");
             $curr_category_ref = $curr_category_ref->{$new_curr_category};
             push @subcategories_depth_names, $new_curr_category;  
         } elsif ($action eq "go_up") {
@@ -189,36 +182,28 @@ sub manage_inventory {
             # Ensure that the new category name is valid and not already in use in the current categories
             my $new_category_name = "";
             while (1) {
-                $new_category_name = input_check("> Entrez le nom de votre nouvelle catégorie : ",
-                                                 qr/^[^\s](.*[^\s])*$/,
-                                                 "Format non valide (aucun espace blanc au début ou à la fin)\n> Entrez le nom de votre nouvelle catégorie : ");
+                $new_category_name = input_check("input_new_category_name", qr/^[^\s](.*[^\s])*$/, "new_category_name_fail");
                 last if (not any {$_ eq $new_category_name} @curr_subcategories);
-                print colorize("<RED_BEGIN>Une catégorie porte déjà le nom de \"<GREEN_BEGIN>$new_category_name<GREEN_END>\". Veuillez choisir un nom différent.\n<RED_END>");
+                print colorize($lh->maketext("category_name_taken", $new_category_name));
             }
 
             add_category($curr_category_ref, $new_category_name);
         } elsif ($action eq "ren_cat") {
             # Rename a category
-            my $category_to_rename = input_check("> Entrez le nom de la catégorie à renommer : ",
-                                                 qr/^($curr_subcategories_disjunction)$/,
-                                                 "> Veuillez entrer un nom de catégorie valide : ");
+            my $category_to_rename = input_check("input_category_rename", qr/^($curr_subcategories_disjunction)$/, "category_fail");
 
             # Ensure that the new category name is valid and not already in use in the current categories
             my $category_new_name = "";
             while (1) {
-                $category_new_name = input_check("> Entrez le nouveau nom de [<GREEN_BEGIN>$category_to_rename<GREEN_END>] : ",
-                                                 qr/^[^\s](.*[^\s])*$/,
-                                                 "Format non valide (aucun espace blanc au début ou à la fin)\n> Entrez le nouveau nom de [<GREEN_BEGIN>$category_to_rename<GREEN_END>] : ");
+                $category_new_name = input_check("input_category_new_name", qr/^[^\s](.*[^\s])*$/, "category_new_name_fail", $category_to_rename);
                 last if (not any {$_ eq $category_new_name} @curr_subcategories);
-                print colorize("<RED_BEGIN>Une catégorie porte déjà le nom de \"<GREEN_BEGIN>$category_new_name<GREEN_END>\". Veuillez choisir un nom différent.\n<RED_END>");
+                print colorize($lh->maketext("category_name_taken", $category_new_name));
             }
             
             rename_category($curr_category_ref, $category_to_rename, $category_new_name);
         } elsif ($action eq "mv_cat") {
             # Move a category
-            my $category_to_move = input_check("> Entrez le nom de la catégorie à déplacer : ",
-                                               qr/^($curr_subcategories_disjunction)$/,
-                                               "> Veuillez entrer un nom de catégorie valide : ");
+            my $category_to_move = input_check("input_category_move", qr/^($curr_subcategories_disjunction)$/, "category_fail");
 
             @moving_subcategories_depth_refs = @subcategories_depth_refs;
             @moving_subcategories_depth_names = @subcategories_depth_names;
@@ -234,9 +219,7 @@ sub manage_inventory {
             }
         } elsif ($action eq "rm_cat") {
             # Remove a category
-            my $category_to_remove = input_check("> Entrez le nom de la catégorie à supprimer : ",
-                                                 qr/^($curr_subcategories_disjunction)$/,
-                                                 "> Veuillez entrer un nom de catégorie valide : ");
+            my $category_to_remove = input_check("input_category_remove", qr/^($curr_subcategories_disjunction)$/, "category_fail");
 
             my @curr_subcategories = @{get_curr_subcategories_ref($curr_category_ref->{$category_to_remove})};
             my @curr_items = @{get_curr_items_ref($curr_category_ref->{$category_to_remove})};
@@ -247,35 +230,22 @@ sub manage_inventory {
                 remove_category($curr_category_ref, $category_to_remove);
             } else {
                 # If category contains elements, ask for confirmation
-                my $rm_confirm = input_check(
-                    "\n> La catégorie [<GREEN_BEGIN>"
-                        . $category_to_remove
-                        . "<GREEN_END>] contient des éléments. Êtes-vous certain de vouloir supprimer tout son contenu (o/n) ? ",
-                    qr/^[on]$/i,
-                    "Choix non valide.\n> Êtes-vous sûr de vouloir supprimer [<GREEN_BEGIN>$category_to_remove<GREEN_END>] (o/n) ? ");
+                my $rm_confirm = input_check("category_remove_confirm", qr/^[oyn]$/i, "category_remove_confirm_fail", $category_to_remove);
                 # Remove the category if the user confirms
-                remove_category($curr_category_ref, $category_to_remove) if ($rm_confirm =~ /^[oO]$/);
+                remove_category($curr_category_ref, $category_to_remove) if ($rm_confirm =~ /^[oy]$/i);
             }
         } elsif ($action eq "add_it") {
             # Add a new item
-            my $new_item = input_check("> Entrez le nom du nouvel item : ",
-                                       qr/^[^\s](.*[^\s])*$/,
-                                       "Format non valide (aucun espace blanc au début ou à la fin)\n> Entrez le nom du nouvel item : ");
+            my $new_item = input_check("input_new_item_name", qr/^[^\s](.*[^\s])*$/, "new_item_name_fail");
             add_item($curr_category_ref, $new_item);
         } elsif ($action eq "ren_it") {
             # Rename an item
-            my $item_to_rename = input_check("> Entrez le nom de l'item à renommer : ",
-                                             qr/^($curr_items_disjunction)$/,
-                                             "> Veuillez entrer un nom d'item valide : ");
-            my $item_new_name = input_check("> Entrez le nouveau nom de \"<YELLOW_BEGIN>$item_to_rename<YELLOW_END>\" : ",
-                                            qr/^[^\s](.*[^\s])*$/,
-                                            "Format non valide (aucun espace blanc au début ou à la fin)\n> Entrez le nouveau nom de \"<YELLOW_BEGIN>$item_to_rename<YELLOW_END>\" : ");
+            my $item_to_rename = input_check("input_item_rename", qr/^($curr_items_disjunction)$/, "item_fail");
+            my $item_new_name = input_check("input_item_new_name", qr/^[^\s](.*[^\s])*$/, "item_new_name_fail", $item_to_rename);
             rename_item($curr_category_ref, $item_to_rename, $item_new_name);
         } elsif ($action eq "mv_it") {
             # Move an item
-            my $item_to_move = input_check("> Entrez le nom de l'item à déplacer : ",
-                                           qr/^($curr_items_disjunction)$/,
-                                           "> Veuillez entrer un nom d'item valide : ");
+            my $item_to_move = input_check("input_item_move", qr/^($curr_items_disjunction)$/, "item_fail");
             
             @moving_subcategories_depth_refs = @subcategories_depth_refs;
             @moving_subcategories_depth_names = @subcategories_depth_names;
@@ -290,9 +260,7 @@ sub manage_inventory {
             }
         } elsif ($action eq "rm_it") {
             # Remove an item
-            my $item_to_remove = input_check("> Entrez le nom de l'item à supprimer ? ",
-                                             qr/^($curr_items_disjunction)$/,
-                                             "> Veuillez entrer un nom d'item valide : ");
+            my $item_to_remove = input_check("input_item_remove", qr/^($curr_items_disjunction)$/, "item_fail");
             remove_item($curr_category_ref, $item_to_remove);
         } elsif ($action eq "quit_save" or $action eq "quit_nosave") {
             @subcategories_depth_names = ();
@@ -319,16 +287,19 @@ sub manage_inventory {
     sub display_moving_current_content {
         my ($curr_moving_category_ref, $element_to_move, $element_to_move_type) = @_;
 
-        print "~" x 100;
-        print "\nDéplacement en cours : ";
+        print "~" x 100;        
         if ($element_to_move_type eq "category") {
-            print "catégorie [" . colored($element_to_move, "green") . "]";
+            say_localized("moving_category", colored($element_to_move, "green"));
         } elsif ($element_to_move_type eq "item") {
-            print "item \"" . colored($element_to_move, "yellow") . "\"";
+            say_localized("moving_item", colored($element_to_move, "yellow"));
         }
-        print scalar @moving_subcategories_depth_names != 0 ?
-                " => catégorie [" . colored(join("/", @moving_subcategories_depth_names), "green") . "]\n\n" :
-                " => ...\n\n";
+
+        if (scalar @moving_subcategories_depth_names != 0) {
+            say_localized("current_moving_category", colored(join("/", @moving_subcategories_depth_names), "green"));
+        } else {
+            say_localized("current_moving_category", "...");
+        }
+
         print category_to_string($curr_moving_category_ref);
     }
 
@@ -341,31 +312,31 @@ sub manage_inventory {
         my $option_nb = 0;
         my %valid_options;
         
-        print "\nActions :\n";
+        say_localized("wish");
         if (scalar @curr_moving_subcategories != 0) {
             if ($element_to_move_type eq "category" &&
                 !(scalar @curr_moving_subcategories == 1 &&
                   $curr_moving_category_ref->{$curr_moving_subcategories[0]} == $category_to_move_parent_ref->{$element_to_move})) {
                 # Prevent from going into the category to move if it is the only one in the current category
-                print ++$option_nb . ". Aller dans une catégorie\n";
+                say_localized("go_into_category", ++$option_nb);
                 $valid_options{$option_nb} = "go_to";
             } elsif ($element_to_move_type eq "item") {
-                print ++$option_nb . ". Aller dans une catégorie\n";
+                say_localized("go_into_category", ++$option_nb);
                 $valid_options{$option_nb} = "go_to";
             }
         }
         if (scalar @moving_subcategories_depth_refs != 0) {
-            print ++$option_nb . ". Remonter d'une catégorie\n";
+            say_localized("go_into_parent_category", ++$option_nb);
             $valid_options{$option_nb} = "go_up";
         }
         if ($element_to_move_type eq "category") {
-            print ++$option_nb . ". Déplacer ici la catégorie\n";
+            say_localized("move_category_here", ++$option_nb);
             $valid_options{$option_nb} = "mv";
         } elsif ($element_to_move_type eq "item" && scalar @moving_subcategories_depth_refs != 0) {
-            print ++$option_nb . ". Déplacer ici l'item\n";
+            say_localized("move_item_here", ++$option_nb);
             $valid_options{$option_nb} = "mv";
         }
-        print ++$option_nb . ". Annuler le déplacement\n\n";
+        say_localized("moving_cancel", ++$option_nb);
         $valid_options{$option_nb} = "cancel";
 
         return \%valid_options;
@@ -384,12 +355,10 @@ sub manage_inventory {
             my $curr_moving_subcategories_disjunction = join "|", @curr_moving_subcategories;            
             my $new_curr_moving_category;
             while (1) {
-                $new_curr_moving_category = input_check("> Entrez le nom de la catégorie vers laquelle se déplacer : ",
-                                                        qr/^($curr_moving_subcategories_disjunction)$/,
-                                                        "> Veuillez entrer un nom de catégorie valide : ");
+                $new_curr_moving_category = input_check("input_category_to_go_into", qr/^($curr_moving_subcategories_disjunction)$/, "category_fail");
                 # Check whether chosen category is the one to move, and if so, prevent from going into it
                 last if $curr_moving_category_ref->{$new_curr_moving_category} != $category_to_move_parent_ref->{$element_to_move};
-                print colored("Vous ne pouvez pas entrer dans la catégorie que vous désirez déplacer.\n", "red");
+                print colored($lh->maketext("move_inside_moving_category"), "red");
             }
 
             push @moving_subcategories_depth_names, $new_curr_moving_category;
@@ -402,8 +371,7 @@ sub manage_inventory {
             # Choose current category to move the element
             if (($element_to_move_type eq "category") && (any {$_ eq $element_to_move} @curr_moving_subcategories)) {
                 # Check whether the name of the category to move is not already taken in the current category
-                print colorize("<RED_BEGIN>Une catégorie porte déjà le nom de \"<GREEN_BEGIN>$element_to_move<GREEN_END>\" ici.\n"
-                      . "Veuillez choisir une catégorie différente ou annuler le déplacement et renommer votre catégorie.\n<RED_END>");
+                print colorize($lh->maketext("move_category_taken", $element_to_move));
                 sleep 3;
                 return moving_element($curr_moving_category_ref, $element_to_move, $element_to_move_type);
             }
@@ -469,14 +437,16 @@ sub visualize_inventory {
     # Save the graph as external PNG file
     if (not any {$_ eq "img"} glob "*") {
         mkdir "img"
-            or die "Impossible de créer le répertoire 'img' : $!\n";
+            or die $lh->maketext("img_directory_error", $!);
     }
     $inventory_graph->run(format => "png", output_file => $curr_dir . encode("CP-1252", "/img/$inventory_name.png"))
-        or die "Impossible de générer le fichier PNG de l'inventaire : $!\n";
+        or die $lh->maketext("png_visualization_error", $!);
 
     # Reapply encoding layer on standard output because "run" method modifies it
     if ($^O eq "MSWin32") {
         binmode STDOUT, ":encoding(CP-850)";
+    } else {
+        binmode STDOUT, ":encoding(UTF-8)";
     }
 }
 

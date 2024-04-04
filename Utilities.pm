@@ -16,17 +16,19 @@ use warnings;
 use utf8;
 
 use Encode qw(encode);
-use FindBin;
-my $curr_dir = encode("CP-1252", "$FindBin::Bin");
-use Term::ANSIColor;
+use FindBin qw($Bin);
+my $curr_dir = encode("CP-1252", $FindBin::Bin);
 use List::Util qw(any);
+use Term::ANSIColor qw(colored);
+
+my $lh = $main::lh;
 
 # Utility routine: gather the names of all previously created inventories
 # RETURNS : list of all inventories currently available in the "inventories" folder (strings)
 sub get_inventories {
     if (not any {$_ eq "inventories"} glob "*") {
         mkdir "inventories"
-            or die "Impossible de créer le répertoire 'inventories' : $!\n";
+            or die $lh->maketext("inventories_directory_error", $!);
     }
     my @inventories_paths = glob qq("$curr_dir/inventories/*");
     my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
@@ -35,17 +37,15 @@ sub get_inventories {
 }
 
 # Utility routine: prompt message, check user input and display error message if needed
-# PARAMS : a prompt message (string), 
-#          a regular expression pattern to test the user input with
-#          and a message to display in case of mismatch (string)
+# PARAMS : the localized prompt message, the pattern to match, the localized error message, the parameters to pass to the localized messages
 # RETURNS : the final accepted user input
 sub input_check {
-    my ($prompt_message, $pattern, $fail_message) = @_;
-    print colorize("<CYAN_BEGIN>" . $prompt_message . "<CYAN_END>");
+    my ($prompt_message, $pattern, $fail_message, @parameters) = @_;
+    print colorize("<CYAN_BEGIN>" . $lh->maketext($prompt_message, @parameters) . "<CYAN_END>");
     my $user_input = <STDIN>;
     chomp $user_input;
     while ($user_input !~ $pattern) {
-        print colorize("<RED_BEGIN>" . $fail_message . "<RED_END>");
+        print colorize("<RED_BEGIN>" . $lh->maketext($fail_message, @parameters) . "<RED_END>");
         $user_input = <STDIN>;
         chomp $user_input;
     }
@@ -87,9 +87,8 @@ sub get_user_choice {
 
     my $options_number = scalar keys %valid_options;
     my $valid_options_disjunction = join "|", keys %valid_options;
-    my $option_choice_nb = input_check("> Entrez le numéro de l'action à effectuer : ",
-                                        qr/^($valid_options_disjunction)$/,
-                                        "> Veuillez entrer un numéro d'action valide (1-$options_number) : ");
+    my $option_choice_nb = input_check("input_action_number", qr/^($valid_options_disjunction)$/, "input_action_number_fail", $options_number);
+
     return $valid_options{$option_choice_nb};
 }
 
