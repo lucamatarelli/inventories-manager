@@ -5,13 +5,8 @@ use strict;
 use warnings;
 use utf8;
 
-BEGIN {
-    # Add the current directory to the @INC array to load local modules
-    use Encode qw(encode);
-    use FindBin qw($Bin);
-    push @INC, encode("CP-1252", $FindBin::Bin);
-}
-
+use FindBin qw($Bin);
+use lib "$Bin";
 # Localization module loading
 use L10N;
 our $lh = L10N->get_handle($ARGV[0])

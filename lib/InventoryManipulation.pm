@@ -16,7 +16,6 @@ use utf8;
 
 use Encode qw(encode);
 use FindBin qw($Bin);
-my $curr_dir = encode("CP-1252", $FindBin::Bin);
 use List::Util qw(any);
 use Storable qw(store);
 use Term::ANSIColor qw(colored);
@@ -78,7 +77,7 @@ sub manage_inventory {
     
     # Save the updated inventory if the user chose to quit and save
     if ($chosen_inventory_action eq "quit_save") {
-        store $inventory_ref, $curr_dir . encode("CP-1252", "/inventories/$inventory_name")
+        store $inventory_ref, encode("CP-1252", "$Bin/inventories/$inventory_name")
             or die $lh->maketext("inventory_set_error", $inventory_name, $!);
     }
 }
@@ -439,7 +438,7 @@ sub visualize_inventory {
         mkdir "img"
             or die $lh->maketext("img_directory_error", $!);
     }
-    $inventory_graph->run(format => "png", output_file => $curr_dir . encode("CP-1252", "/img/$inventory_name.png"))
+    $inventory_graph->run(format => "png", output_file => encode("CP-1252", "$Bin/img/$inventory_name.png"))
         or die $lh->maketext("png_visualization_error", $!);
 
     # Reapply encoding layer on standard output because "run" method modifies it

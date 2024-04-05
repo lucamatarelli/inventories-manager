@@ -17,7 +17,6 @@ use utf8;
 
 use Encode qw(encode);
 use FindBin qw($Bin);
-my $curr_dir = encode("CP-1252", $FindBin::Bin);
 use List::Util qw(any);
 use Term::ANSIColor qw(colored);
 
@@ -30,7 +29,7 @@ sub get_inventories {
         mkdir "inventories"
             or die $lh->maketext("inventories_directory_error", $!);
     }
-    my @inventories_paths = glob qq("$curr_dir/inventories/*");
+    my @inventories_paths = glob encode("CP-1252", qq("$Bin/inventories/*"));
     my @inventories = grep {$_ =~ s/.+\/(.+)/$1/} @inventories_paths;
     return @inventories;
 

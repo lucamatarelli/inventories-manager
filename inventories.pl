@@ -7,17 +7,11 @@ use strict;
 use warnings;
 use utf8;
 
-my $curr_dir;
-BEGIN {
-    # Add the current directory to the @INC array to load local modules
-    use Encode qw(encode);
-    use FindBin qw($Bin);
-    $curr_dir = encode("CP-1252", $FindBin::Bin);
-    push @INC, $curr_dir;
-}
-
 our $lh;
 BEGIN {
+    use FindBin qw($Bin);
+    use lib "lib";
+
     # Localization module loading
     use L10N;
     $lh = L10N->get_handle()
@@ -25,21 +19,21 @@ BEGIN {
     my $language = $lh->language_tag;
 
     # Install dependencies if needed
-    my $install_dependencies_status = system "perl install_dependencies.pl $language";
+    my $install_dependencies_status = system "perl lib/install_dependencies.pl $language";
     exit 1 if $install_dependencies_status != 0;
 }
-sub say_localized { L10N::say_localized($lh, @_); }
 
+use Encode qw(encode);
 use File::Copy qw(move);
 use List::Util qw(any);
 use Storable qw(retrieve);
 use Term::ANSIColor qw(colored);
 
 # Importing necessary internal modules and routines
-require InventoryManipulation;
-InventoryManipulation->import();
-require Utilities;
-Utilities->import();
+use InventoryManipulation;
+use Utilities;
+
+sub say_localized { L10N::say_localized($lh, @_); }
 
 # Encoding layer for properly displayed CLI interactions
 if ($^O eq "MSWin32") {
@@ -120,7 +114,7 @@ sub perform_main_action {
     } elsif ($chosen_main_action eq "open_inv") {
         # Open an existing inventory
         my $inventory_to_open_name = input_check("input_inventory_open", qr/^($inventories_disjunction)$/, "inventory_fail");
-        my $inventory_to_open_ref = retrieve($curr_dir . encode("CP-1252", "/inventories/$inventory_to_open_name"))
+        my $inventory_to_open_ref = retrieve encode("CP-1252", "$Bin/inventories/$inventory_to_open_name")
                                         or die $lh->maketext("inventory_get_error", $inventory_to_open_name, $!);
         manage_inventory($inventory_to_open_ref, $inventory_to_open_name);
     } elsif ($chosen_main_action eq "ren_inv") {
@@ -135,7 +129,7 @@ sub perform_main_action {
             print colorize($lh->maketext("inventory_name_taken", $inventory_new_name));
         }
 
-        move($curr_dir . encode("CP-1252", "/inventories/$inventory_to_rename"), $curr_dir . encode("CP-1252", "/inventories/$inventory_new_name"))
+        move encode("CP-1252", "$Bin/inventories/$inventory_to_rename"), encode("CP-1252", "$Bin/inventories/$inventory_new_name")
             or die $lh->maketext("inventory_rename_error", $inventory_to_rename, $!);
     } elsif ($chosen_main_action eq "rm_inv") {
         # Remove an existing inventory
@@ -144,13 +138,13 @@ sub perform_main_action {
         my $rm_confirm = input_check("inventory_remove_confirm", qr/^[oyn]$/i, "inventory_remove_confirm_fail", $inventory_to_remove);
 
         if ($rm_confirm =~ /^[oy]$/i) {
-            unlink($curr_dir . encode("CP-1252", "/inventories/$inventory_to_remove"))
+            unlink encode("CP-1252", "$Bin/inventories/$inventory_to_remove")
                 or die $lh->maketext("inventory_remove_error", $inventory_to_remove, $!);
         }           
     } elsif ($chosen_main_action eq "viz_inv") {
         # Save a graph representation of a whole inventory as an external PNG image
         my $inventory_to_visualize_name = input_check("input_inventory_visualization", qr/^($inventories_disjunction)$/, "inventory_fail");
-        my $inventory_to_visualize_ref = retrieve($curr_dir . encode("CP-1252", "/inventories/$inventory_to_visualize_name"))
+        my $inventory_to_visualize_ref = retrieve encode("CP-1252", "$Bin/inventories/$inventory_to_visualize_name")
                                             or die $lh->maketext("inventory_get_error", $inventory_to_visualize_name, $!);
         visualize_inventory($inventory_to_visualize_ref, $inventory_to_visualize_name);
         
